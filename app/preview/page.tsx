@@ -1,45 +1,154 @@
 'use client';
 import{useState,useEffect}from'react';
 import Link from'next/link';
-const nav=['Visão geral','Militares','Capacitação · CDP','Treinamentos','Promoções · UP','Rebaixamentos','Registros'];
-type Stats={totalSincronizados:number;emCdp:number;treinosMes:number;acoesRegistradas:number;ultimaSincronizacao:string|null;divisoes:Record<string,number>;atividadesRecentes:unknown[]};
+const DIVISION_SIGLAS=['EXÉRCITO','STAFF','BFE','CIE','BAC','BPE'];
+const EVENT_ICONS:Record<string,string>={'promocao':'↑','rebaixamento':'↓','treino':'◆','verificacao':'ZR','login':'◎'};
+type Stats={totalSincronizados:number;emCdp:number;treinosMes:number;acoesRegistradas:number;ultimaSincronizacao:string|null;divisoes:Record<string,number>;atividadesRecentes:Array<{id:string;tipo:string;userId:string;username:string;descricao:string;timestamp:string}>};
+
+const mockUser={id:'1',username:'ComandanteEB',avatar:'',rank:'[CR] Criador',rankNumber:255,isCreator:true,isAdmin:true};
 
 export default function Preview(){
   const[active,setActive]=useState('Visão geral');
   const[stats,setStats]=useState<Stats|null>(null);
-  const goToLogin=()=>window.location.href='/';
-
+  const goLogin=()=>window.location.href='/';
   useEffect(()=>{fetch('/api/dashboard/stats').then(r=>r.json()).then(setStats).catch(()=>null)},[]);
 
-  const displayStats:[string,string,string][]=stats?[
-    ['Militares sincronizados',String(stats.totalSincronizados),stats.ultimaSincronizacao?`Último sync: ${new Date(stats.ultimaSincronizacao).toLocaleDateString('pt-BR')}`:'Aguardando sincronização'],
-    ['Em capacitação',String(stats.emCdp),'CDP ativo'],
-    ['Treinos realizados',String(stats.treinosMes),'Este mês'],
-    ['Ações registradas',String(stats.acoesRegistradas),'Total no sistema']
-  ]:[
-    ['Militares sincronizados','—','Carregando...'],['Em capacitação','—','—'],['Treinos realizados','—','—'],['Ações registradas','—','—']
-  ];
-
-  const divisions=[['EXÉRCITO',String(stats?.divisoes['EXÉRCITO']||0)],['STAFF',String(stats?.divisoes['STAFF']||0)],['BFE',String(stats?.divisoes['BFE']||0)],['CIE',String(stats?.divisoes['CIE']||0)],['BAC',String(stats?.divisoes['BAC']||0)],['BPE',String(stats?.divisoes['BPE']||0)]] as[string,string][];
-  const totalDiv=divisions.reduce((a,[,c])=>a+parseInt(c||'0'),0);
+  const pages:Record<string,()=>React.ReactElement>={
+    'Visão geral':()=><VisaoGeral stats={stats}/>,
+    'Militares':()=><MilitaresView/>,
+    'Capacitação · CDP':()=><CapacitacaoView/>,
+    'Treinamentos':()=><TreinamentosView/>,
+    'Promoções · UP':()=><PromocoesView/>,
+    'Rebaixamentos':()=><RebaixamentosView/>,
+    'Registros':()=><RegistrosView/>,
+    'Painel do criador':()=><PainelCriadorView/>,
+    'Configurações':()=><ConfiguracoesView/>,
+  };
 
   return<main className="shell">
-<aside className="sidebar"><div className="brand"><span className="brand-mark">M</span><div><b>EB DO MIG</b><small>Central Militar</small></div></div><nav><p className="nav-label">COMANDO</p>{nav.map((x,i)=><button key={x} className={'nav-item '+(active===x?'active':'')} onClick={()=>setActive(x)}><span>{['⌂','♟','◷','◆','↑','↓','▤'][i]}</span>{x}</button>)}<p className="nav-label">ADMINISTRAÇÃO</p>{['Painel do criador','Configurações'].map((x,i)=><button key={x} className={'nav-item '+(active===x?'active':'')} onClick={()=>setActive(x)}><span>{i?'⚙':'♛'}</span>{x}</button>)}</nav><div className="sidebar-foot"><i/><div><b>Sistemas operacionais</b><small>Roblox · sincronizado</small></div></div></aside>
-<section className="content"><header className="topbar"><button className="search" onClick={()=>setActive('Militares')}>⌕ <span>Buscar militar, patente ou registro...</span><kbd>⌘ K</kbd></button><Link className="user" href="/" title="Fazer login"><div style={{width:34,height:34,borderRadius:8,background:'#1a2a1a',display:'grid',placeItems:'center',color:'var(--accent)',fontSize:12,fontWeight:700}}>CE</div><div><b>ComandanteEB</b><small>[CR] Criador</small></div><span>⌄</span></Link></header>
-<div className="page"><div className="eyebrow">— MODO PREVIEW · <a href="/" style={{color:'var(--accent)',textDecoration:'underline'}}>FAÇA LOGIN PARA USAR</a></div><div className="hero"><div><h1>{active}</h1><p>Bem-vindo ao centro de operações do EB DO MIG.</p></div><div><Link href="/" className="primary" style={{textDecoration:'none'}}>🔑 Fazer login com Roblox</Link></div></div>
-{active==='Visão geral'?<><div className="stats">{displayStats.map(([l,v,d],i)=><article className="stat" key={l}><div><span>{l}</span><i>{['♟','◷','◆','▤'][i]}</i></div><strong>{v}</strong><small>{d}</small></article>)}</div>
-<div className="main-grid"><article className="panel activity"><PanelHead tag="TEMPO REAL" title="Atividade recente" action="Ver todos →"/><div className="timeline"><EmptyState text="As ações reais aparecerão após a sincronização."/></div></article>
-<aside className="right"><article className="panel"><PanelHead tag="CAPACITAÇÃO" title="CDP ativo" action="Ver painel"/><EmptyState text={stats?.emCdp?`${stats.emCdp} militares em capacitação`:'Nenhuma capacitação ativa'}/></article><article className="panel quick"><span className="kicker">ACESSO RÁPIDO</span><h2>Ações de comando</h2><div>{[['↑','Realizar UP'],['◆','Novo treino'],['◷','Criar CDP'],['⌕','Consultar']].map(([i,t])=><button key={t} onClick={goToLogin}><i>{i}</i><b>{t}</b></button>)}</div></article></aside></div>
-<article className="panel divisions"><PanelHead tag="ORGANIZAÇÃO" title="Divisões configuradas" action={`○ ${totalDiv} membros`}/><div className="division-list">{divisions.map(([n,c])=><div className="division" key={n}><b>{n}</b><small>{c} membros</small><div><i style={{width:`${Math.min(100,parseInt(c||'0')*4)}%`}}/></div></div>)}</div></article></>:<WorkspaceView active={active} onAction={goToLogin}/>}</div></section></main>}
+<aside className="sidebar"><div className="brand"><span className="brand-mark">M</span><div><b>EB DO MIG</b><small>Central Militar</small></div></div><nav><p className="nav-label">COMANDO</p>{['Visão geral','Militares','Capacitação · CDP','Treinamentos','Promoções · UP','Rebaixamentos','Registros'].map((x,i)=><button key={x} className={'nav-item '+(active===x?'active':'')} onClick={()=>setActive(x)}><span>{['⌂','♟','◷','◆','↑','↓','▤'][i]}</span>{x}</button>)}<p className="nav-label">ADMINISTRAÇÃO</p>{['Painel do criador','Configurações'].map((x,i)=><button key={x} className={'nav-item '+(active===x?'active':'')} onClick={()=>setActive(x)}><span>{i?'⚙':'♛'}</span>{x}</button>)}</nav><div className="sidebar-foot"><i/><div><b>Sistemas operacionais</b><small>Roblox · sincronizado</small></div></div></aside>
+<section className="content"><header className="topbar"><div className="user-info"><div style={{width:32,height:32,borderRadius:8,background:'#1a2a1a',display:'grid',placeItems:'center',color:'var(--accent)',fontSize:12,fontWeight:700}}>CE</div><div><b>ComandanteEB</b><small>[CR] Criador</small></div></div><Link className="logout-btn" href="/">🔑 Fazer login</Link></header>
+<div className="page"><div className="eyebrow">— MODO PREVIEW · <a href="/" style={{color:'var(--accent)',textDecoration:'underline'}}>FAÇA LOGIN PARA USAR</a></div>{pages[active]?.()}</div></section></main>}
 
-function PanelHead({tag,title,action}:{tag:string,title:string,action:string}){return<div className="panel-head"><div><span className="kicker">{tag}</span><h2>{title}</h2></div><button>{action}</button></div>}
+function VisaoGeral({stats}:{stats:Stats|null}){
+  const ds:[string,string,string][]=stats?[
+    ['Militares sincronizados',String(stats.totalSincronizados),stats.ultimaSincronizacao?`Último sync: ${new Date(stats.ultimaSincronizacao).toLocaleDateString('pt-BR')}`:'Aguardando sync'],
+    ['Em capacitação',String(stats.emCdp),'CDP ativo'],['Treinos realizados',String(stats.treinosMes),'Este mês'],['Ações registradas',String(stats.acoesRegistradas),'Total']
+  ]:[['Militares sincronizados','—','—'],['Em capacitação','—','—'],['Treinos realizados','—','—'],['Ações registradas','—','—']];
+  const divs=DIVISION_SIGLAS.map(s=>[s,String(stats?.divisoes[s]||0)]as[string,string]);
+  return<><div className="hero"><div><h1>Visão geral</h1><p>Bem-vindo ao centro de operações do EB DO MIG.</p></div></div>
+<div className="stats">{ds.map(([l,v,d],i)=><article className="stat" key={l}><div><span>{l}</span><i>{['♟','◷','◆','▤'][i]}</i></div><strong>{v}</strong><small>{d}</small></article>)}</div>
+<div className="main-grid"><article className="panel activity"><PanelHead tag="TEMPO REAL" title="Atividade recente"/><div className="timeline">{stats?.atividadesRecentes?.length?stats.atividadesRecentes.map(ev=><div className="event" key={ev.id}><span className="event-icon">{EVENT_ICONS[ev.tipo]||'◎'}</span><div><b>{ev.username}</b><p>{ev.descricao}</p><small>{getTimeAgo(ev.timestamp)}</small></div><em>{ev.tipo.toUpperCase()}</em></div>):<EmptyState text="Ações reais aparecerão após sincronização."/>}</div></article>
+<aside className="right"><article className="panel"><PanelHead tag="CAPACITAÇÃO" title="CDP ativo"/><EmptyState text={stats?.emCdp?`${stats.emCdp} militares em capacitação`:'Nenhuma CDP ativa'}/></article></aside></div>
+<article className="panel divisions"><PanelHead tag="ORGANIZAÇÃO" title="Divisões" action={`○ ${divs.reduce((a,[,c])=>a+parseInt(c),0)} membros`}/><div className="division-list">{divs.map(([n,c])=><div className="division" key={n}><b>{n}</b><small>{c} membros</small><div><i style={{width:`${Math.min(100,parseInt(c)*4)}%`}}/></div></div>)}</div></article></>}
+
+function MilitaresView(){
+  const[query,setQuery]=useState('');
+  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">EFETIVO</span><h2>Consulta de militares</h2></div></div>
+<label className="workspace-search">⌕ <input placeholder="Buscar por nome, ID ou patente" value={query} onChange={e=>setQuery(e.target.value)}/></label>
+<div className="division-tabs">{['TODOS',...DIVISION_SIGLAS].map(s=><button key={s}>{s}</button>)}</div>
+<div className="records"><EmptyState text="Faça login para ver os militares sincronizados."/></div></article></div>}
+
+function CapacitacaoView(){
+  return<div className="workspace-grid"><article className="panel capacitacao-panel"><div className="capacitacao-card"><div style={{width:80,height:80,borderRadius:'50%',background:'var(--bg)',margin:'0 auto 12px',border:'3px solid var(--accent)',display:'grid',placeItems:'center',color:'var(--accent)',fontSize:24,fontWeight:700}}>CE</div><h2>ComandanteEB</h2><small>[CR] Criador</small><div className="cdp-status done"><span className="cdp-icon">✓</span><div><b>Sua CDP acabou</b></div></div></div></article><aside className="panel help"><span className="kicker">CAPACITAÇÃO</span><h2>Sobre a CDP</h2><p>A Capacitação de Desenvolvimento Pessoal é obrigatória para progressão de patente.</p><ul><li>Cada patente tem um tempo mínimo</li><li>Após completar, elegível para promoção</li><li>O instrutor registra o treino no sistema</li></ul></aside></div>}
+
+function TreinamentosView(){
+  const[tab,setTab]=useState<'exercicio'|'divisao'|null>(null);
+  const[selectedDiv,setSelectedDiv]=useState('');
+  const exercicios=['Tiro ao alvo','Navegação terrestre','Primeiros socorros','Combate corpo a corpo','Instruções de rádio','Marcha de resistência'];
+  const divisaoTreinos:Record<string,string[]>={
+    'BFE':['Operações especiais','Resgate de reféns','Infantaria leve','Combate urbano'],
+    'CIE':['Inteligência tática','Interceptação','Análise de ameaças','Criptografia'],
+    'BAC':['Ações de comando','Assalto a edifícios','Infiltração','DDL'],
+    'BPE':['Policiamento ostensivo','Controle de distúrbios','Proteção de autoridades','Trânsito'],
+    'STAFF':['Moderation','Suporte ao membro','Relatórios','Gestão']
+  };
+  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">ACADEMIA</span><h2>Treinamentos</h2></div></div>
+{!tab?<div className="treino-select"><button className="treino-option" onClick={()=>setTab('exercicio')}><span className="treino-icon">♟</span><div><b>Exército</b><small>Treinos de patente para todos os membros</small></div><strong>→</strong></button><button className="treino-option" onClick={()=>setTab('divisao')}><span className="treino-icon">◆</span><div><b>Divisões</b><small>Treinos específicos de cada divisão</small></div><strong>→</strong></button></div>
+:tab==='exercicio'?
+<div><button className="back-btn" onClick={()=>setTab(null)}>← Voltar</button><h3 style={{margin:'12px 0',color:'var(--text)'}}>Treinos do Exército</h3><div className="records">{exercicios.map(t=><div className="record" key={t}><span className="record-avatar">◆</span><div><b>{t}</b><small>Treino obrigatório</small></div><em>ATIVO</em></div>)}</div></div>
+:
+<div><button className="back-btn" onClick={()=>setTab(null)}>← Voltar</button><h3 style={{margin:'12px 0',color:'var(--text)'}}>Selecione a divisão</h3>
+{!selectedDiv?<div className="treino-select">{Object.keys(divisaoTreinos).map(d=><button className="treino-option" key={d} onClick={()=>setSelectedDiv(d)}><span className="treino-icon">◆</span><div><b>{d}</b><small>{divisaoTreinos[d].length} treinos</small></div><strong>→</strong></button>)}</div>
+:<div><button className="back-btn" onClick={()=>setSelectedDiv('')}>← Voltar</button><h3 style={{margin:'12px 0',color:'var(--text)'}}>Treinos — {selectedDiv}</h3><div className="records">{divisaoTreinos[selectedDiv].map(t=><div className="record" key={t}><span className="record-avatar">◆</span><div><b>{t}</b><small>Treino divisional</small></div><em>ATIVO</em></div>)}</div></div>}
+</div>}</article></div>}
+
+function PromocoesView(){
+  const[search,setSearch]=useState('');
+  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">CARREIRA</span><h2>Promoções</h2></div></div>
+<label className="workspace-search">⌕ <input placeholder="Buscar por username ou ID" value={search} onChange={e=>setSearch(e.target.value)}/></label>
+<EmptyState text="Faça login para promover militares."/></article></div>}
+
+function RebaixamentosView(){
+  const[search,setSearch]=useState('');
+  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">DISCIPLINA</span><h2>Rebaixamentos</h2></div></div>
+<label className="workspace-search">⌕ <input placeholder="Buscar por username ou ID" value={search} onChange={e=>setSearch(e.target.value)}/></label>
+<EmptyState text="Faça login para rebaixar militares."/></article></div>}
+
+function RegistrosView(){
+  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">AUDITORIA</span><h2>Registros</h2></div></div>
+<EmptyState text="Faça login como criador para ver os registros do Discord."/></article></div>}
+
+function PainelCriadorView(){
+  const[tab,setTab]=useState<'cdp'|'patentes'|'treinos'>('cdp');
+  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">ACESSO MÁXIMO</span><h2>Painel do Criador</h2></div></div>
+<div className="division-tabs">{[{k:'cdp',l:'CDP por Patente'},{k:'patentes',l:'Patentes e Hierarquia'},{k:'treinos',l:'Treinamentos'}].map(t=><button key={t.k} className={tab===t.k?'active':''} onClick={()=>setTab(t.k as typeof tab)}>{t.l}</button>)}</div>
+{tab==='cdp'&&<CdpConfigView/>}
+{tab==='patentes'&&<PatentesConfigView/>}
+{tab==='treinos'&&<TreinosConfigView/>}
+</article></div>}
+
+function CdpConfigView(){
+  const[ranks]=useState([
+    {sigla:'REC',nome:'Recruta',dias:0},{sigla:'SLD',nome:'Soldado',dias:1},{sigla:'CB',nome:'Cabo',dias:2},
+    {sigla:'3° SGT',nome:'Terceiro Sargento',dias:3},{sigla:'2° SGT',nome:'Segundo Sargento',dias:4},
+    {sigla:'1° SGT',nome:'Primeiro Sargento',dias:5},{sigla:'ST',nome:'Sub-tenente',dias:6},
+    {sigla:'CT',nome:'Cadete',dias:7},{sigla:'ASP',nome:'Aspirante a Oficial',dias:8},
+    {sigla:'2° TEN',nome:'Segundo Tenente',dias:9},{sigla:'1° TEN',nome:'Primeiro Tenente',dias:10},
+    {sigla:'CAP',nome:'Capitão',dias:11},{sigla:'MAJ',nome:'Major',dias:12},
+    {sigla:'TEN-CEL',nome:'Tenente Coronel',dias:13},{sigla:'CEL',nome:'Coronel',dias:14},
+    {sigla:'GEN BDA',nome:'General de Brigada',dias:15},{sigla:'GEN DV',nome:'General de Divisão',dias:16},
+    {sigla:'GEN EX',nome:'General de Exército',dias:17},
+  ]);
+  return<div><h3 style={{margin:'12px 0',color:'var(--text)'}}>Tempo de CDP por patente — Exército</h3>
+<div className="cdp-config-list">{ranks.map(r=><div className="cdp-config-row" key={r.sigla}><span className="cdp-sigla">[{r.sigla}]</span><span className="cdp-nome">{r.nome}</span><label className="cdp-input"><input type="number" min={0} max={30} defaultValue={r.dias} readOnly/><small>dias</small></label></div>)}</div>
+<p style={{color:'var(--muted)',fontSize:12,marginTop:12}}>Faça login para editar os tempos de CDP.</p></div>}
+
+function PatentesConfigView(){
+  const[patentes]=useState([
+    {sigla:'REC',nome:'Recruta',cat:'Praças'},{sigla:'SLD',nome:'Soldado',cat:'Praças'},
+    {sigla:'CB',nome:'Cabo',cat:'Praças'},{sigla:'3° SGT',nome:'Terceiro Sargento',cat:'Graduados'},
+    {sigla:'2° SGT',nome:'Segundo Sargento',cat:'Graduados'},{sigla:'1° SGT',nome:'Primeiro Sargento',cat:'Graduados'},
+    {sigla:'ST',nome:'Sub-tenente',cat:'Graduados'},{sigla:'CT',nome:'Cadete',cat:'Oficiais'},
+    {sigla:'ASP',nome:'Aspirante a Oficial',cat:'Oficiais'},{sigla:'2° TEN',nome:'Segundo Tenente',cat:'Oficiais'},
+    {sigla:'1° TEN',nome:'Primeiro Tenente',cat:'Oficiais'},{sigla:'CAP',nome:'Capitão',cat:'Oficiais'},
+    {sigla:'MAJ',nome:'Major',cat:'Oficiais Alta'},{sigla:'TEN-CEL',nome:'Tenente Coronel',cat:'Oficiais Alta'},
+    {sigla:'CEL',nome:'Coronel',cat:'Oficiais Alta'},{sigla:'GEN BDA',nome:'General de Brigada',cat:'Generais'},
+    {sigla:'GEN DV',nome:'General de Divisão',cat:'Generais'},{sigla:'GEN EX',nome:'General de Exército',cat:'Generais'},
+    {sigla:'EM',nome:'Elite Militar',cat:'Elite'},{sigla:'ES',nome:'Elite Secreta',cat:'Elite'},
+    {sigla:'ER',nome:'Elite Real',cat:'Elite'},{sigla:'SCMT',nome:'Subcomandante',cat:'Comando'},
+    {sigla:'CMT',nome:'Comandante',cat:'Comando'},
+  ]);
+  return<><h3 style={{margin:'12px 0',color:'var(--text)'}}>Hierarquia de Patentes — Exército</h3>
+<div className="records">{patentes.map(p=><div className="record" key={p.sigla}><span className="record-avatar">{p.sigla.slice(0,3)}</span><div><b>[{p.sigla}] {p.nome}</b><small>{p.cat}</small></div><em>EDITAR</em></div>)}</div>
+<p style={{color:'var(--muted)',fontSize:12,marginTop:12}}>Faça login para adicionar ou editar patentes.</p></>}
+
+function TreinosConfigView(){
+  const[treinos]=useState(['Tiro ao alvo','Navegação terrestre','Primeiros socorros','Combate corpo a corpo','Instruções de rádio','Marcha de resistência']);
+  return<><h3 style={{margin:'12px 0',color:'var(--text)'}}>Treinamentos do Exército</h3>
+<div className="records">{treinos.map(t=><div className="record" key={t}><span className="record-avatar">◆</span><div><b>{t}</b><small>Treino obrigatório</small></div><em>ATIVO</em></div>)}</div>
+<p style={{color:'var(--muted)',fontSize:12,marginTop:12}}>Faça login para adicionar ou remover treinos.</p></>}
+
+function ConfiguracoesView(){
+  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">SISTEMA</span><h2>Configurações</h2></div></div>
+<h3 style={{margin:'12px 0',color:'var(--text)'}}>Integração Discord</h3>
+<p style={{color:'var(--muted)',fontSize:13,marginBottom:12}}>Conecte os canais do Discord para enviar logs.</p>
+<div className="config-form"><label>Webhook URL — Promoções</label><input placeholder="https://discord.com/api/webhooks/..." readOnly/><label>Webhook URL — Rebaixamentos</label><input placeholder="https://discord.com/api/webhooks/..." readOnly/><label>Webhook URL — Treinos</label><input placeholder="https://discord.com/api/webhooks/..." readOnly/><label>Webhook URL — Logs</label><input placeholder="https://discord.com/api/webhooks/..." readOnly/></div>
+<p style={{color:'var(--muted)',fontSize:12,marginTop:12}}>Faça login para configurar os webhooks.</p>
+<h3 style={{margin:'24px 0 12px',color:'var(--text)'}}>Status da Integração</h3>
+<div className="records"><div className="record"><span className="record-avatar" style={{background:'#1a2a1a'}}>RB</span><div><b>Roblox OAuth</b><small>Conectado · Grupo 521106467</small></div><em style={{color:'var(--accent)'}}>ATIVO</em></div>
+<div className="record"><span className="record-avatar" style={{background:'#1a1a2a'}}>DC</span><div><b>Discord Webhooks</b><small>Aguardando configuração</small></div><em>PENDENTE</em></div></div></article></div>}
+
+function PanelHead({tag,title,action}:{tag:string;title:string;action?:string}){return<div className="panel-head"><div><span className="kicker">{tag}</span><h2>{title}</h2></div>{action&&<button>{action}</button>}</div>}
 function EmptyState({text}:{text:string}){return<div className="empty-state"><span>◇</span><b>Nenhum dado disponível</b><p>{text}</p></div>}
-function WorkspaceView({active,onAction}:{active:string,onAction:()=>void}){const cfg:Record<string,[string,string,string[]]>={
-'Militares':['EFETIVO','Consulta de militares',[]],
-'Capacitação · CDP':['CAPACITAÇÃO','CDPs em andamento',[]],
-'Treinamentos':['ACADEMIA','Treinos de patente',[]],
-'Promoções · UP':['CARREIRA','Promoções militares',[]],
-'Rebaixamentos':['DISCIPLINA','Relatórios de rebaixamento',[]],
-'Registros':['AUDITORIA','Registros protegidos',[]],
-'Painel do criador':['ACESSO MÁXIMO','Painel do criador',['Patentes e hierarquia','Divisões e grupos Roblox','Permissões e integrações']],
-'Configurações':['SISTEMA','Configurações',['Integração Roblox · Configurada','Discord e webhooks · Aguardando canal','Segurança e permissões · Preparadas']]};const[tag,title,rows]=cfg[active]||cfg.Militares;return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">{tag}</span><h2>{title}</h2></div><button className="primary" onClick={onAction}>＋ Nova ação</button></div><label className="workspace-search">⌕ <input placeholder="Pesquisar por nome, ID ou patente"/></label><div className="records">{rows.length?rows.map((row,i)=><button key={row}><span className="record-avatar">{row.slice(0,2).toUpperCase()}</span><div><b>{row.split(' · ')[0]}</b><small>{row.split(' · ').slice(1).join(' · ')}</small></div><em>{i===1?'EM ANDAMENTO':'ATIVO'}</em><strong>→</strong></button>):<EmptyState text="Os registros aparecerão aqui quando a integração estiver ativa."/>}</div></article><aside className="panel help"><span className="kicker">CONTROLE SEGURO</span><h2>Permissões preparadas</h2><p>Todas as ações serão validadas conforme a patente, CDP ativo e cargo do responsável.</p><ul><li>Login oficial Roblox</li><li>Registros permanentes</li><li>Regras no servidor</li></ul></aside></div>}
+function getTimeAgo(ts:string):string{const d=Date.now()-new Date(ts).getTime();const m=Math.floor(d/60000);if(m<1)return'Agora';if(m<60)return`há ${m}min`;const h=Math.floor(m/60);if(h<24)return`há ${h}h`;return`há ${Math.floor(h/24)}d`}

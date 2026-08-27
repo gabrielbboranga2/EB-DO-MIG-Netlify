@@ -750,3 +750,79 @@ body {
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ── Treino select ── */
+.treino-select{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.treino-option{display:flex;align-items:center;gap:12px;width:100%;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);cursor:pointer;transition:border-color .15s}
+.treino-option:hover{border-color:var(--accent)}
+.treino-option b{font-size:14px}
+.treino-option small{color:var(--muted);font-size:11px}
+.treino-option strong{margin-left:auto;color:var(--accent);font-size:14px}
+.treino-icon{width:40px;height:40px;border-radius:8px;background:rgba(184,255,128,0.08);display:grid;place-items:center;color:var(--accent);font-size:18px;flex-shrink:0}
+.back-btn{background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;padding:0;margin-bottom:8px}
+.back-btn:hover{text-decoration:underline}
+
+/* ── Member action card ── */
+.member-action-card{margin-top:16px;padding:20px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.member-header{display:flex;align-items:center;gap:14px}
+.member-avatar{width:56px;height:56px;border-radius:12px;background:var(--bg)}
+.member-header b{font-size:15px;display:block}
+.member-header small{color:var(--muted);font-size:11px;display:block}
+.action-success{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(184,255,128,0.08);border:1px solid rgba(184,255,128,0.3);border-radius:8px;color:var(--accent);font-weight:600}
+.action-success span{font-size:18px}
+.action-success.danger{background:rgba(255,100,100,0.08);border-color:rgba(255,100,100,0.3);color:#ff6b6b}
+.danger-btn{width:100%;margin-top:12px;padding:12px;background:rgba(255,100,100,0.1);border:1px solid rgba(255,100,100,0.3);border-radius:8px;color:#ff6b6b;font:600 13px "Segoe UI",sans-serif;cursor:pointer}
+.danger-btn:hover{background:rgba(255,100,100,0.2)}
+.danger-btn-sm{background:none;border:1px solid rgba(255,100,100,0.3);color:#ff6b6b;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;margin-left:auto}
+.danger-btn-sm:hover{background:rgba(255,100,100,0.1)}
+
+/* ── Capacitação ── */
+.capacitacao-panel{padding:0;overflow:hidden}
+.capacitacao-card{padding:32px 24px;text-align:center}
+.capacitation-avatar{width:80px;height:80px;border-radius:50%;background:var(--bg);margin-bottom:12px;border:3px solid var(--accent)}
+.cdp-status{display:flex;align-items:center;gap:12px;margin-top:20px;padding:16px;border-radius:8px;text-align:left}
+.cdp-status.done{background:rgba(184,255,128,0.06);border:1px solid rgba(184,255,128,0.2)}
+.cdp-status.active{background:rgba(255,200,50,0.06);border:1px solid rgba(255,200,50,0.2)}
+.cdp-icon{font-size:24px;width:40px;height:40px;border-radius:8px;display:grid;place-items:center;flex-shrink:0}
+.cdp-status.done .cdp-icon{background:rgba(184,255,128,0.1);color:var(--accent)}
+.cdp-status.active .cdp-icon{background:rgba(255,200,50,0.1);color:var(--gold)}
+.cdp-status b{font-size:14px;display:block}
+.cdp-status small{color:var(--muted);font-size:12px}
+
+/* ── CDP Config ── */
+.cdp-config-list{display:flex;flex-direction:column;gap:4px;margin-top:12px}
+.cdp-config-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.cdp-sigla{font:700 12px "Courier New",monospace;color:var(--accent);min-width:60px}
+.cdp-nome{flex:1;font-size:13px;color:var(--text)}
+.cdp-input{display:flex;align-items:center;gap:6px}
+.cdp-input input{width:50px;padding:6px 8px;background:var(--bg);border:1px solid var(--line);border-radius:4px;color:var(--text);font-size:13px;text-align:center}
+.cdp-input input:focus{border-color:var(--accent);outline:none}
+.cdp-input small{color:var(--muted);font-size:10px}
+
+/* ── Add form ── */
+.add-form{display:flex;gap:8px;margin:12px 0;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:8px;flex-wrap:wrap}
+.add-form input,.add-form select{flex:1;min-width:120px;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--text);font-size:13px}
+.add-form input:focus,.add-form select:focus{border-color:var(--accent);outline:none}
+.add-form-inline{display:flex;gap:8px;margin-bottom:12px}
+.add-form-inline input{flex:1;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--text);font-size:13px}
+.add-form-inline input:focus{border-color:var(--accent);outline:none}
+
+/* ── Config form ── */
+.config-form{display:flex;flex-direction:column;gap:8px}
+.config-form label{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:8px}
+.config-form input{padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--text);font-size:13px}
+.config-form input:focus{border-color:var(--accent);outline:none}
+
+/* ── User info in topbar ── */
+.user-info{display:flex;align-items:center;gap:10px}
+.user-info .avatar{width:32px;height:32px;border-radius:8px;background:var(--bg)}
+.user-info b{font-size:13px;color:var(--text)}
+.user-info small{font-size:11px;color:var(--muted)}
+.logout-btn{padding:6px 14px;background:rgba(255,100,100,0.08);border:1px solid rgba(255,100,100,0.2);border-radius:6px;color:#ff6b6b;font-size:12px;text-decoration:none;transition:all .15s}
+.logout-btn:hover{background:rgba(255,100,100,0.15);border-color:rgba(255,100,100,0.4)}
+
+/* ── Member detail ── */
+.member-detail{padding:20px}
+.member-detail .member-header{flex-direction:column;text-align:center}
+.member-detail .member-avatar{width:72px;height:72px;border-radius:50%}
+.member-detail .member-header b{font-size:16px}

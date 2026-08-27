@@ -235,3 +235,69 @@
   .login-card h1 { font-size: 26px; }
   .login-card { padding: 32px 24px; border-radius: 20px; }
 }
+
+/* ── Bio button ── */
+.login-bio-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 48px;
+  margin-top: 10px;
+  background: rgba(184,255,128,0.05);
+  border: 1px solid rgba(184,255,128,0.25);
+  border-radius: 8px;
+  color: var(--accent);
+  font: 600 14px "Segoe UI", Inter, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.login-bio-btn:hover {
+  background: rgba(184,255,128,0.12);
+  border-color: var(--accent);
+}
+
+.login-bio-btn span {
+  font-size: 16px;
+}
+
+/* ── Bio modal ── */
+.bio-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: #0b1219;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font: 13px "Segoe UI", Inter, sans-serif;
+  outline: none;
+  transition: border-color .15s;
+}
+
+.bio-input:focus {
+  border-color: var(--accent);
+}
+
+.bio-input::placeholder {
+  color: var(--muted);
+}
+
+.bio-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px auto;
+  padding: 14px 24px;
+  background: #0b1219;
+  border: 1px dashed var(--accent);
+  border-radius: 8px;
+  color: var(--accent);
+  font: 700 20px "Courier New", monospace;
+  letter-spacing: 3px;
+  text-align: center;
+  user-select: all;
+}

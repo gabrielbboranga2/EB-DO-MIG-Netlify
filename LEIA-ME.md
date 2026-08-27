@@ -17,7 +17,7 @@ Esta pasta contém o projeto completo em Next.js. Conecte o repositório complet
 3. Conecte o repositório do GitHub.
 4. A Vercel detecta o Next.js automaticamente — não precisa de configuração extra.
 5. Antes de publicar, abra **Project Settings → Environment Variables** e cadastre as variáveis listadas em `.env.example`.
-6. Depois que a Vercel gerar o endereço final (ex: `https://eb-do-mig-netlify.vercel.app`), atualize o aplicativo OAuth do Roblox com a URL `https://eb-do-mig-netlify.vercel.app/api/auth/roblox/callback`.
+6. Depois que a Vercel gerar o endereço final (ex: `https://eb-do-mig.vercel.app`), atualize o aplicativo OAuth do Roblox com a URL `https://eb-do-mig.vercel.app/api/auth/roblox/callback`.
 
 ## Variáveis obrigatórias
 

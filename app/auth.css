@@ -1,0 +1,237 @@
+/* ── Login page ── */
+.auth-loading,
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #060a14;
+  color: var(--accent);
+  font: 800 18px "Segoe UI", Inter, sans-serif;
+  letter-spacing: .18em;
+}
+
+.login-page {
+  position: relative;
+  overflow: hidden;
+  background: #060a14;
+}
+
+/* Background noise + gradient */
+.login-page::before {
+  content: '';
+  position: absolute;
+  inset: -8%;
+  z-index: 0;
+  background: linear-gradient(180deg, rgba(6,10,20,0.92) 0%, rgba(6,10,20,0.9) 65%, rgba(6,10,20,0.95) 100%),
+              radial-gradient(ellipse at 80% 20%, rgba(184,255,128,0.04), transparent 55%);
+}
+
+.login-page::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' /%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' /%3E%3C/svg%3E");
+}
+
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: min(440px, calc(100vw - 32px));
+  padding: 40px 36px;
+  text-align: center;
+  border: 1px solid rgba(184,255,128,0.2);
+  background: linear-gradient(135deg, rgba(10,18,36,0.9), rgba(6,10,20,0.95));
+  border-radius: 24px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 60px rgba(184,255,128,0.06) inset;
+}
+
+/* Corner accents */
+.login-card .corner-tl,
+.login-card .corner-tr,
+.login-card .corner-bl,
+.login-card .corner-br {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+}
+
+.login-card .corner-tl {
+  top: -1px;
+  left: -1px;
+  border-left: 2px solid var(--accent);
+  border-top: 2px solid var(--accent);
+  filter: drop-shadow(0 0 6px var(--accent));
+}
+
+.login-card .corner-tr {
+  top: -1px;
+  right: -1px;
+  border-right: 2px solid var(--gold);
+  border-top: 2px solid var(--gold);
+  filter: drop-shadow(0 0 6px var(--gold));
+}
+
+.login-card .corner-bl {
+  bottom: -1px;
+  left: -1px;
+  border-left: 2px solid var(--gold);
+  border-bottom: 2px solid var(--gold);
+  filter: drop-shadow(0 0 6px var(--gold));
+}
+
+.login-card .corner-br {
+  bottom: -1px;
+  right: -1px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  filter: drop-shadow(0 0 6px var(--accent));
+}
+
+.login-emblem {
+  display: block;
+  margin: 0 auto 20px;
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid rgba(184,255,128,0.3);
+  box-shadow: 0 0 40px rgba(184,255,128,0.25), 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.login-kicker {
+  display: block;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.login-card h1 {
+  margin: 0 0 8px;
+  font: 900 32px "Segoe UI", Inter, Arial, sans-serif;
+  line-height: 1.15;
+  letter-spacing: -.8px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 16px rgba(0,0,0,0.5);
+  color: #ffffff;
+}
+
+.login-card h1 strong {
+  color: var(--gold);
+  font-weight: 900;
+}
+
+.login-card > p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 28px;
+}
+
+.login-roblox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 48px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-dim));
+  border: none;
+  border-radius: 8px;
+  color: #060a14;
+  font: 700 14px "Segoe UI", Inter, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(184,255,128,0.35), inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -2px 0 rgba(0,0,0,0.15);
+  transition: all .15s ease;
+}
+
+.login-roblox:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(184,255,128,0.5), inset 0 2px 0 rgba(255,255,255,0.35);
+}
+
+.login-roblox span {
+  font-size: 16px;
+}
+
+.login-security {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(184,255,128,0.1);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.login-security i {
+  width: 4px;
+  height: 4px;
+  background: var(--accent-dim);
+  border-radius: 50%;
+}
+
+.login-card > small {
+  display: block;
+  margin-top: 16px;
+  font-size: 10px;
+  color: #526070;
+  line-height: 1.5;
+}
+
+.login-page footer {
+  position: absolute;
+  bottom: 24px;
+  font-size: 10px;
+  color: #3a4a5a;
+  letter-spacing: .12em;
+}
+
+/* ── Floating particles ── */
+.login-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.login-particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  opacity: 0;
+  animation: floatUp 12s linear infinite;
+}
+
+@keyframes floatUp {
+  0% { opacity: 0; transform: translateY(100vh); }
+  10% { opacity: 0.7; }
+  90% { opacity: 0.7; }
+  100% { opacity: 0; transform: translateY(-10vh); }
+}
+
+/* ── User menu ── */
+.user {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ── Login responsive ── */
+@media (max-width: 560px) {
+  .login-card h1 { font-size: 26px; }
+  .login-card { padding: 32px 24px; border-radius: 20px; }
+}

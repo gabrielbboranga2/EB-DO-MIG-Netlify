@@ -1,4 +1,6 @@
 import {NextResponse} from 'next/server';
+import {getPatenteByRoleId,canAdmin,isAltoComando} from '@/lib/patentes';
+import {DIVISION_IDS,getDivisaoByGroupId} from '@/lib/divisoes-mig';
 
 export async function GET(request:Request){
   const url=new URL(request.url),code=url.searchParams.get('code'),state=url.searchParams.get('state');
@@ -15,9 +17,31 @@ export async function GET(request:Request){
   const groupResponse=await fetch(`https://groups.roblox.com/v2/users/${profile.sub}/groups/roles`);
   const memberships=groupResponse.ok?(await groupResponse.json() as {data:Array<{group:{id:number;name:string};role:{id:number;name:string;rank:number}}>}).data:[];
   const main=memberships.find(x=>x.group.id===521106467);
-  const divisionIds=new Set([319140811,34565583,729809284,886757353,710960394]);
-  const divisions=memberships.filter(x=>divisionIds.has(x.group.id)).map(x=>({id:x.group.id,name:x.group.name,role:x.role.name}));
-  const payload=btoa(JSON.stringify({id:profile.sub,username:profile.preferred_username||profile.name||'Militar',avatar:profile.picture||'',rank:main?.role.name||'Não pertence ao grupo',rankNumber:main?.role.rank||0,isCreator:main?.role.name==='[CR] Criador',divisions,exp:Date.now()+86400000}));
+  if(!main)return NextResponse.redirect(`${url.origin}/?login=nogroup`);
+  const patente=getPatenteByRoleId(String(main.role.id));
+  const divisions=memberships.filter(x=>DIVISION_IDS.has(x.group.id)).map(x=>{
+    const div=getDivisaoByGroupId(x.group.id);
+    return{id:x.group.id,name:div?.sigla||x.group.name,role:x.role.name,roleId:String(x.role.id)};
+  });
+  const primaryDivision=divisions.find(d=>d.id!==521106467);
+  const isCreator=main.role.name==='[CR] Criador'||main.role.rank>=253;
+  const isAdmin=canAdmin(String(main.role.id))||isCreator;
+  const isHighCommand=isAltoComando(String(main.role.id))||isCreator;
+  const payload=btoa(JSON.stringify({
+    id:profile.sub,
+    username:profile.preferred_username||profile.name||'Militar',
+    avatar:profile.picture||'',
+    rank:patente?`[${patente.sigla}] ${patente.nome}`:main.role.name,
+    rankNumber:main.role.rank,
+    roleId:String(main.role.id),
+    isCreator,
+    isAdmin,
+    isHighCommand,
+    division:primaryDivision?.name||'EXÉRCITO',
+    divisions,
+    cdpDias:patente?.cdpDias||0,
+    exp:Date.now()+86400000
+  }));
   const signature=await sign(payload,sessionSecret);
   const response=NextResponse.redirect(url.origin);
   response.cookies.set('eb_session',`${payload}.${signature}`,{httpOnly:true,secure:true,sameSite:'lax',maxAge:86400,path:'/'});

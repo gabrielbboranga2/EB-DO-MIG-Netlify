@@ -1,7 +1,7 @@
 import{readFileSync,writeFileSync,existsSync}from'fs';
 import{join}from'path';
 
-const DATA_DIR=join(process.cwd(),'.data');
+const DATA_DIR=process.env.VERCEL?'/tmp':join(process.cwd(),'.data');
 const MEMBERS_FILE=join(DATA_DIR,'members.json');
 const AUDIT_FILE=join(DATA_DIR,'audit.json');
 

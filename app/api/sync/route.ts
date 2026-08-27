@@ -5,7 +5,7 @@ import{getPatenteByRoleId}from'@/lib/patentes';
 
 interface RobloxMember{
   user:{userId:number;username:string;displayName:string};
-  role:{id:number;name:string;rank:number};
+  roles:Array<{id:number;name:string;rank:number}>;
 }
 
 async function fetchGroupMembers(groupId:number):Promise<RobloxMember[]>{
@@ -53,7 +53,9 @@ export async function POST(request:Request){
     const thumbnails=await fetchUserThumbnails(userIds);
     let updated=0;
     for(const member of mainMembers){
-      const patente=getPatenteByRoleId(String(member.role.id));
+      const role=member.roles[0];
+      if(!role)continue;
+      const patente=getPatenteByRoleId(String(role.id));
       const userDivisions=Object.entries(divisionMembers)
         .filter(([_,members])=>members.some(m=>m.user.userId===member.user.userId))
         .map(([gid])=>getDivisaoByGroupId(Number(gid)))
@@ -63,11 +65,11 @@ export async function POST(request:Request){
         userId:String(member.user.userId),
         username:member.user.displayName||member.user.username,
         avatar:thumbnails[member.user.userId]||'',
-        rankName:patente?`[${patente.sigla}] ${patente.nome}`:member.role.name,
-        rankNumber:member.role.rank,
-        roleId:String(member.role.id),
+        rankName:patente?`[${patente.sigla}] ${patente.nome}`:role.name,
+        rankNumber:role.rank,
+        roleId:String(role.id),
         division:primaryDiv?.sigla||'EXÉRCITO',
-        divisionRole:primaryDiv?member.role.name:'',
+        divisionRole:primaryDiv?role.name:'',
       });
       updated++;
     }

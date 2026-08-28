@@ -17,7 +17,7 @@ export async function GET(request:Request){
     ]));
     return NextResponse.json({
       totalSincronizados:divisoes['EXÉRCITO']||members.length,
-      emCdp:0,
+      emCdp:members.filter(member=>member.cdpActive).length,
       treinosMes:0,
       acoesRegistradas:0,
       ultimaSincronizacao:new Date().toISOString(),

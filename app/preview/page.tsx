@@ -7,7 +7,7 @@ type Stats={totalSincronizados:number;emCdp:number;treinosMes:number;acoesRegist
 
 const MOCK_STATS:Stats={
   totalSincronizados:108,
-  emCdp:7,
+  emCdp:0,
   treinosMes:24,
   acoesRegistradas:138,
   ultimaSincronizacao:'2026-08-28T12:00:00.000Z',
@@ -57,19 +57,25 @@ function VisaoGeral({stats}:{stats:Stats}){
 function MilitaresView(){
   const[query,setQuery]=useState('');
   const[division,setDivision]=useState('');
-  const[selected,setSelected]=useState<{userId:string;username:string;rankName:string;division:string}|null>(null);
+  type PreviewMember={userId:string;username:string;displayName:string;rankName:string;division:string;divisions:string[];cdpActive:boolean};
+  const[selected,setSelected]=useState<PreviewMember|null>(null);
   const members=[
-    {userId:'102481',username:'SgtSilva',rankName:'[3º SGT] Terceiro Sargento',division:'BFE'},
-    {userId:'208315',username:'RochaComando',rankName:'[1º TEN] Primeiro Tenente',division:'BAC'},
-    {userId:'391027',username:'CostaBPE',rankName:'[CB] Cabo',division:'BPE'},
-    {userId:'485921',username:'IntelMIG',rankName:'[2º SGT] Segundo Sargento',division:'CIE'},
-  ];
-  const filtered=members.filter(member=>(!division||member.division===division)&&(!query||`${member.username} ${member.userId} ${member.rankName}`.toLowerCase().includes(query.toLowerCase())));
-  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">EFETIVO</span><h2>Consulta de militares</h2></div></div>
-<label className="workspace-search"><span className="search-code" aria-hidden="true">BUSCA</span><input placeholder="Nome, ID ou patente" value={query} onChange={e=>setQuery(e.target.value)}/></label>
-<div className="division-tabs">{['TODOS',...DIVISION_SIGLAS].map(s=><button type="button" key={s} className={(s==='TODOS'&&!division)||division===s?'active':''} onClick={()=>setDivision(s==='TODOS'?'':s)}>{s}</button>)}</div>
-<div className="records">{filtered.length?filtered.map(member=><button type="button" key={member.userId} className={selected?.userId===member.userId?'selected':''} onClick={()=>setSelected(member)}><span className="record-avatar">{member.username.slice(0,2).toUpperCase()}</span><div><b>{member.username}</b><small>{member.rankName} · {member.division}</small></div><em>ID: {member.userId}</em></button>):<EmptyState title="Nenhum militar encontrado" text="Tente outro nome, patente ou divisão."/>}</div></article>
-{selected?<aside className="panel member-detail"><div className="member-header"><span className="member-avatar avatar-fallback">{selected.username.slice(0,2).toUpperCase()}</span><div><b>{selected.username}</b><small>{selected.rankName}</small><small>Divisão: {selected.division}</small><small>ID: {selected.userId}</small></div></div></aside>:<aside className="panel help"><span className="kicker">DEMONSTRAÇÃO</span><h2>Selecione um militar</h2><p>Clique em um registro para abrir os detalhes.</p></aside>}</div>}
+    {userId:'102481',username:'SgtSilva',displayName:'Silva',rankName:'[3º SGT] Terceiro Sargento',division:'EXÉRCITO · BFE',divisions:['EXÉRCITO','BFE'],cdpActive:false},
+    {userId:'208315',username:'RochaComando',displayName:'Rocha',rankName:'[1º TEN] Primeiro Tenente',division:'EXÉRCITO · BAC',divisions:['EXÉRCITO','BAC'],cdpActive:false},
+    {userId:'391027',username:'CostaBPE',displayName:'Costa',rankName:'[CB] Cabo',division:'EXÉRCITO · BPE',divisions:['EXÉRCITO','BPE'],cdpActive:false},
+    {userId:'485921',username:'IntelMIG',displayName:'Inteligência MIG',rankName:'[2º SGT] Segundo Sargento',division:'EXÉRCITO · CIE',divisions:['EXÉRCITO','CIE'],cdpActive:false},
+    {userId:'512804',username:'StaffMIG',displayName:'Equipe MIG',rankName:'Administrador',division:'STAFF',divisions:['STAFF'],cdpActive:false},
+    {userId:'640219',username:'RecrutaMIG',displayName:'Novo Recruta',rankName:'[REC] Recruta',division:'EXÉRCITO',divisions:['EXÉRCITO'],cdpActive:false},
+  ] satisfies PreviewMember[];
+  const counts=Object.fromEntries(DIVISION_SIGLAS.map(sigla=>[sigla,members.filter(member=>member.divisions.includes(sigla)).length]));
+  const filtered=members.filter(member=>(!division||member.divisions.includes(division))&&(!query||`${member.username} ${member.displayName} ${member.userId} ${member.rankName}`.toLowerCase().includes(query.toLowerCase())));
+  const changeDivision=(next:string)=>{setDivision(next==='TODOS'?'':next);setSelected(null)};
+  return<div className="workspace-grid roster-layout"><article className="panel workspace"><div className="workspace-toolbar roster-toolbar"><div><span className="kicker">EFETIVO DEMONSTRATIVO</span><h2>Integrantes das comunidades</h2><p>Representação do painel conectado aos seis grupos oficiais.</p></div><div className="roster-total"><strong>{filtered.length}</strong><span>{query?'resultados':division?'integrantes':'militares únicos'}</span></div></div>
+<label className="workspace-search"><span className="search-code" aria-hidden="true">BUSCA</span><input placeholder="Nome, ID ou patente" value={query} onChange={e=>{setQuery(e.target.value);setSelected(null)}}/></label>
+<div className="division-tabs roster-tabs">{['TODOS',...DIVISION_SIGLAS].map(s=><button type="button" key={s} className={(s==='TODOS'&&!division)||division===s?'active':''} onClick={()=>changeDivision(s)}><span>{s}</span><small>{s==='TODOS'?members.length:counts[s]}</small></button>)}</div>
+<div className="roster-context"><span><i/>ROBLOX OPEN CLOUD</span><small>{filtered.length} {filtered.length===1?'integrante encontrado':'integrantes encontrados'}</small></div>
+<div className="records roster-records">{filtered.length?filtered.map(member=><button type="button" key={member.userId} className={selected?.userId===member.userId?'selected':''} onClick={()=>setSelected(member)}><span className="record-avatar-shell"><span>{member.username.slice(0,2).toUpperCase()}</span></span><div><b>{member.username}</b><span className="display-name">{member.displayName}</span><small>{member.rankName} · {member.division}</small></div><span className="record-side"><span className="cdp-chip inactive">FORA DA CDP</span><em>ID: {member.userId}</em></span></button>):<EmptyState title="Nenhum militar encontrado" text="Tente outro nome, patente ou comunidade."/>}</div></article>
+{selected?<aside className="panel member-detail roster-detail"><div className="member-header"><span className="member-avatar avatar-fallback">{selected.username.slice(0,2).toUpperCase()}</span><div><b>{selected.username}</b><small>{selected.displayName}</small><small>{selected.rankName}</small><small>Comunidades: {selected.division}</small><small>ID: {selected.userId}</small></div></div><div className="member-cdp-status inactive"><span>CDP</span><b>Não está em CDP</b><small>Nenhum ciclo de capacitação iniciado</small></div><a className="member-profile-link" href={`https://www.roblox.com/users/${selected.userId}/profile`} target="_blank" rel="noreferrer">Abrir perfil no Roblox ↗</a></aside>:<aside className="panel help roster-help"><span className="kicker">COMUNIDADES CONECTADAS</span><h2>Selecione um integrante</h2><p>Clique em um registro para conferir patente, comunidades e situação da CDP.</p><div className="community-summary">{DIVISION_SIGLAS.map(sigla=><div key={sigla}><span>{sigla}</span><b>{counts[sigla]}</b></div>)}</div><div className="initial-cdp-note"><i/>Todos começam fora da CDP</div></aside>}</div>}
 
 function CapacitacaoView(){
   return<div className="workspace-grid"><article className="panel capacitacao-panel"><div className="capacitacao-card"><div style={{width:80,height:80,borderRadius:'50%',background:'var(--bg)',margin:'0 auto 12px',border:'3px solid var(--accent)',display:'grid',placeItems:'center',color:'var(--accent)',fontSize:24,fontWeight:700}}>CE</div><h2>ComandanteEB</h2><small>[CR] Criador</small><div className="cdp-status done"><span className="cdp-icon">✓</span><div><b>Sua CDP acabou</b></div></div></div></article><aside className="panel help"><span className="kicker">CAPACITAÇÃO</span><h2>Sobre a CDP</h2><p>A Capacitação de Desenvolvimento Pessoal é obrigatória para progressão de patente.</p><ul><li>Cada patente tem um tempo mínimo</li><li>Após completar, elegível para promoção</li><li>O instrutor registra o treino no sistema</li></ul></aside></div>}

@@ -7,7 +7,7 @@ const DIVISION_SIGLAS=['EXÉRCITO','STAFF','BFE','CIE','BAC','BPE'];
 const EVENT_ICONS:Record<string,string>={'promocao':'UP','rebaixamento':'RB','treino':'TR','verificacao':'VR','login':'LG'};
 type RobloxUser={id:string;username:string;avatar:string;rank?:string;rankNumber?:number;roleId?:string;isCreator?:boolean;isAdmin?:boolean;isHighCommand?:boolean;division?:string;divisions?:Array<{id:number;name:string;role:string;roleId?:string}>};
 type DashboardStats={totalSincronizados:number;emCdp:number;treinosMes:number;acoesRegistradas:number;ultimaSincronizacao:string|null;divisoes:Record<string,number>;atividadesRecentes:Array<{id:string;tipo:string;userId:string;username:string;descricao:string;timestamp:string}>};
-type Member={userId:string;username:string;rankName:string;division:string;avatar:string;roleId:string;rankNumber:number};
+type Member={userId:string;username:string;displayName:string;rankName:string;division:string;divisions:string[];avatar:string;roleId:string;rankNumber:number;cdpActive:boolean;cdpStartedAt:string|null;cdpEndsAt:string|null};
 
 function isDashboardStats(value:unknown):value is DashboardStats{
   if(!value||typeof value!=='object')return false;
@@ -67,23 +67,31 @@ function MilitaresView(){
   const[selected,setSelected]=useState<Member|null>(null);
   const[loading,setLoading]=useState(true);
   const[error,setError]=useState('');
+  const[page,setPage]=useState(1);
+  const[total,setTotal]=useState(0);
+  const[rosterTotal,setRosterTotal]=useState(0);
+  const[totalPages,setTotalPages]=useState(1);
+  const[counts,setCounts]=useState<Record<string,number>>({});
   useEffect(()=>{
     const controller=new AbortController();
     const timer=setTimeout(()=>{
       setLoading(true);setError('');
-      fetch(`/api/militares/search?q=${encodeURIComponent(query)}&division=${encodeURIComponent(division)}`,{signal:controller.signal})
+      fetch(`/api/militares/search?q=${encodeURIComponent(query)}&division=${encodeURIComponent(division)}&page=${page}`,{signal:controller.signal})
         .then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||'Falha na consulta');return data})
-        .then(data=>setMembers(data.members||[]))
-        .catch(fetchError=>{if(fetchError.name!=='AbortError'){setMembers([]);setError('Não foi possível carregar os grupos do Roblox.')}})
+        .then(data=>{setMembers(data.members||[]);setTotal(data.total||0);setRosterTotal(data.rosterTotal||0);setTotalPages(data.totalPages||1);setCounts(data.counts||{})})
+        .catch(fetchError=>{if(fetchError.name!=='AbortError'){setMembers([]);setTotal(0);setError('Não foi possível carregar os grupos do Roblox. Verifique a chave Open Cloud na Vercel.')}})
         .finally(()=>{if(!controller.signal.aborted)setLoading(false)});
     },300);
     return()=>{clearTimeout(timer);controller.abort()};
-  },[query,division]);
-  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">EFETIVO</span><h2>Consulta de militares</h2></div></div>
-<label className="workspace-search"><span className="search-code" aria-hidden="true">BUSCA</span><input placeholder="Nome, ID ou patente" value={query} onChange={e=>setQuery(e.target.value)}/></label>
-<div className="division-tabs">{['TODOS',...DIVISION_SIGLAS].map(s=><button key={s} className={(s==='TODOS'&&!division)||(division===s)?'active':''} onClick={()=>setDivision(s==='TODOS'?'':s)}>{s}</button>)}</div>
-<div className="records">{loading?<EmptyState title="Sincronizando efetivo" text="Consultando os grupos oficiais do Roblox..."/>:members.length?members.map(m=><button key={m.userId} className={selected?.userId===m.userId?'selected':''} onClick={()=>setSelected(m)}><img className="record-avatar" src={m.avatar||''} alt="" onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}}/><div><b>{m.username}</b><small>{m.rankName} · {m.division}</small></div><em>ID: {m.userId}</em></button>):<EmptyState title={error?'Sincronização indisponível':'Nenhum militar encontrado'} text={error||'Tente outro nome, patente ou divisão.'}/>}</div></article>
-{selected?<aside className="panel member-detail"><div className="member-header"><img src={selected.avatar||''} alt="" className="member-avatar" onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}}/><div><b>{selected.username}</b><small>{selected.rankName}</small><small>Divisão: {selected.division}</small><small>ID: {selected.userId}</small></div></div></aside>:<aside className="panel help"><span className="kicker">CONTROLE SEGURO</span><h2>Selecione um militar</h2><p>Clique em um militar para ver seus detalhes.</p></aside>}</div>}
+  },[query,division,page]);
+  const changeDivision=(next:string)=>{setDivision(next==='TODOS'?'':next);setPage(1);setSelected(null)};
+  return<div className="workspace-grid roster-layout"><article className="panel workspace"><div className="workspace-toolbar roster-toolbar"><div><span className="kicker">EFETIVO REAL</span><h2>Integrantes das comunidades</h2><p>Dados sincronizados com os seis grupos oficiais no Roblox.</p></div><div className="roster-total"><strong>{loading?'—':total}</strong><span>{query?'resultados':division?'integrantes':'militares únicos'}</span></div></div>
+<label className="workspace-search"><span className="search-code" aria-hidden="true">BUSCA</span><input placeholder="Nome, ID ou patente" value={query} onChange={e=>{setQuery(e.target.value);setPage(1);setSelected(null)}}/></label>
+<div className="division-tabs roster-tabs">{['TODOS',...DIVISION_SIGLAS].map(s=><button type="button" key={s} className={(s==='TODOS'&&!division)||(division===s)?'active':''} onClick={()=>changeDivision(s)}><span>{s}</span><small>{s==='TODOS'?rosterTotal:(counts[s]??'—')}</small></button>)}</div>
+<div className="roster-context"><span><i/>ROBLOX OPEN CLOUD</span><small>{loading?'Atualizando integrantes...':`${total} ${total===1?'integrante encontrado':'integrantes encontrados'}`}</small></div>
+<div className="records roster-records">{loading?<EmptyState title="Sincronizando efetivo" text="Consultando os grupos oficiais do Roblox..."/>:members.length?members.map(m=><button type="button" key={m.userId} className={selected?.userId===m.userId?'selected':''} onClick={()=>setSelected(m)}><span className="record-avatar-shell"><span>{m.username.slice(0,2).toUpperCase()}</span>{m.avatar&&<img src={m.avatar} alt="" onError={e=>{(e.currentTarget as HTMLImageElement).style.display='none'}}/>}</span><div><b>{m.username}</b>{m.displayName&&m.displayName!==m.username&&<span className="display-name">{m.displayName}</span>}<small>{m.rankName} · {m.division}</small></div><span className="record-side"><span className={`cdp-chip ${m.cdpActive?'active':'inactive'}`}>{m.cdpActive?'EM CDP':'FORA DA CDP'}</span><em>ID: {m.userId}</em></span></button>):<EmptyState title={error?'Sincronização indisponível':'Nenhum militar encontrado'} text={error||'Tente outro nome, patente ou comunidade.'}/>}</div>
+{!loading&&!error&&totalPages>1&&<div className="roster-pagination"><button type="button" disabled={page<=1} onClick={()=>setPage(current=>Math.max(1,current-1))}>← Anterior</button><span>Página <b>{page}</b> de <b>{totalPages}</b></span><button type="button" disabled={page>=totalPages} onClick={()=>setPage(current=>Math.min(totalPages,current+1))}>Próxima →</button></div>}</article>
+{selected?<aside className="panel member-detail roster-detail"><div className="member-header"><span className="member-avatar avatar-fallback">{selected.username.slice(0,2).toUpperCase()}{selected.avatar&&<img src={selected.avatar} alt="" onError={e=>{(e.currentTarget as HTMLImageElement).style.display='none'}}/>}</span><div><b>{selected.username}</b>{selected.displayName&&selected.displayName!==selected.username&&<small>{selected.displayName}</small>}<small>{selected.rankName}</small><small>Comunidades: {selected.division}</small><small>ID: {selected.userId}</small></div></div><div className={`member-cdp-status ${selected.cdpActive?'active':'inactive'}`}><span>CDP</span><b>{selected.cdpActive?'Em andamento':'Não está em CDP'}</b><small>{selected.cdpActive?'Capacitação ativa':'Nenhum ciclo de capacitação iniciado'}</small></div><a className="member-profile-link" href={`https://www.roblox.com/users/${selected.userId}/profile`} target="_blank" rel="noreferrer">Abrir perfil no Roblox ↗</a></aside>:<aside className="panel help roster-help"><span className="kicker">COMUNIDADES CONECTADAS</span><h2>Selecione um integrante</h2><p>Clique em um registro para conferir patente, comunidades e situação da CDP.</p><div className="community-summary">{DIVISION_SIGLAS.map(sigla=><div key={sigla}><span>{sigla}</span><b>{counts[sigla]??'—'}</b></div>)}</div><div className="initial-cdp-note"><i/>Todos começam fora da CDP</div></aside>}</div>}
 
 function CapacitacaoView({user}:{user:RobloxUser}){
   const[cdpStatus,setCdpStatus]=useState<{active:boolean;fim?:string}|null>(null);

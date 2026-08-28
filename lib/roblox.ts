@@ -11,6 +11,9 @@ export interface LiveMember{
   avatar:string;
   roleId:string;
   rankNumber:number;
+  cdpActive:boolean;
+  cdpStartedAt:string|null;
+  cdpEndsAt:string|null;
 }
 
 export interface UserGroupMembership{
@@ -106,6 +109,9 @@ async function loadRoster():Promise<LiveMember[]>{
       avatar:avatars.get(userId)||'',
       roleId,
       rankNumber:role?.rank??patente?.ordem??0,
+      cdpActive:false,
+      cdpStartedAt:null,
+      cdpEndsAt:null,
     };
   }).sort((left,right)=>right.rankNumber-left.rankNumber||left.username.localeCompare(right.username,'pt-BR'));
 }

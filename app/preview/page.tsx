@@ -1,6 +1,9 @@
 'use client';
 import{useState,useEffect}from'react';
 import{DashboardShell,EmptyState,PanelHead}from'../components/DashboardShell';
+import{TrainingRegistration}from'../components/TrainingRegistration';
+import{DiscordConfiguration}from'../components/DiscordConfiguration';
+import{RankChangeWorkflow}from'../components/RankChangeWorkflow';
 const DIVISION_SIGLAS=['EXÉRCITO','STAFF','BFE','CIE','BAC','BPE'];
 const EVENT_ICONS:Record<string,string>={'promocao':'UP','rebaixamento':'RB','treino':'TR','verificacao':'VR','login':'LG'};
 type Stats={totalSincronizados:number;emCdp:number;treinosMes:number;acoesRegistradas:number;ultimaSincronizacao:string|null;divisoes:Record<string,number>;atividadesRecentes:Array<{id:string;tipo:string;userId:string;username:string;descricao:string;timestamp:string;relativeLabel?:string}>};
@@ -27,6 +30,7 @@ export default function Preview(){
   const pages:Record<string,()=>React.ReactElement>={
     'Visão geral':()=><VisaoGeral stats={stats}/>,
     'Militares':()=><MilitaresView/>,
+    'Hierarquia':()=><HierarchyView/>,
     'Capacitação · CDP':()=><CapacitacaoView/>,
     'Treinamentos':()=><TreinamentosView/>,
     'Promoções · UP':()=><PromocoesView/>,
@@ -77,48 +81,29 @@ function MilitaresView(){
 <div className="records roster-records">{filtered.length?filtered.map(member=><button type="button" key={member.userId} className={selected?.userId===member.userId?'selected':''} onClick={()=>setSelected(member)}><span className="record-avatar-shell"><span>{member.username.slice(0,2).toUpperCase()}</span></span><div><b>{member.username}</b><span className="display-name">{member.displayName}</span><small>{member.rankName} · {member.division}</small></div><span className="record-side"><span className="cdp-chip inactive">FORA DA CDP</span><em>ID: {member.userId}</em></span></button>):<EmptyState title="Nenhum militar encontrado" text="Tente outro nome, patente ou comunidade."/>}</div></article>
 {selected?<aside className="panel member-detail roster-detail"><div className="member-header"><span className="member-avatar avatar-fallback">{selected.username.slice(0,2).toUpperCase()}</span><div><b>{selected.username}</b><small>{selected.displayName}</small><small>{selected.rankName}</small><small>Comunidades: {selected.division}</small><small>ID: {selected.userId}</small></div></div><div className="member-cdp-status inactive"><span>CDP</span><b>Não está em CDP</b><small>Nenhum ciclo de capacitação iniciado</small></div><a className="member-profile-link" href={`https://www.roblox.com/users/${selected.userId}/profile`} target="_blank" rel="noreferrer">Abrir perfil no Roblox ↗</a></aside>:<aside className="panel help roster-help"><span className="kicker">COMUNIDADES CONECTADAS</span><h2>Selecione um integrante</h2><p>Clique em um registro para conferir patente, comunidades e situação da CDP.</p><div className="community-summary">{DIVISION_SIGLAS.map(sigla=><div key={sigla}><span>{sigla}</span><b>{counts[sigla]}</b></div>)}</div><div className="initial-cdp-note"><i/>Todos começam fora da CDP</div></aside>}</div>}
 
+function HierarchyView(){
+  const[selected,setSelected]=useState('EXÉRCITO');
+  const[query,setQuery]=useState('');
+  const[groups,setGroups]=useState<Array<{groupId:number;sigla:string;name:string;roles:Array<{id:string;rank:number;name:string}>}>>([]);
+  const[loading,setLoading]=useState(true);
+  const[error,setError]=useState('');
+  useEffect(()=>{fetch('/api/hierarquia').then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error);return data}).then(data=>setGroups(data.groups||[])).catch(()=>setError('Não foi possível consultar os cargos atuais no Roblox.')).finally(()=>setLoading(false))},[]);
+  const group=groups.find(item=>item.sigla===selected)||groups[0];
+  const roles=(group?.roles||[]).filter(role=>!query||role.name.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR')));
+  return<div className="hierarchy-page"><div className="hero hierarchy-hero"><div><span className="kicker">ESTRUTURA OFICIAL</span><h1>Hierarquia militar</h1><p>Cargos atuais carregados diretamente das seis comunidades no Roblox.</p></div><div className="hero-status preview"><i/>DADOS REAIS · PREVIEW</div></div><article className="panel hierarchy-panel"><div className="workspace-toolbar"><div><span className="kicker">COMUNIDADE</span><h2>{group?.name||selected}</h2></div><span className="panel-meta">{loading?'SINCRONIZANDO':`${roles.length} CARGOS`}</span></div><div className="division-tabs hierarchy-tabs">{DIVISION_SIGLAS.map(sigla=><button type="button" key={sigla} className={selected===sigla?'active':''} onClick={()=>{setSelected(sigla);setQuery('')}}>{sigla}</button>)}</div><label className="workspace-search"><span className="search-code" aria-hidden="true">BUSCA</span><input placeholder="Buscar cargo ou patente" value={query} onChange={event=>setQuery(event.target.value)}/></label>{loading?<EmptyState title="Sincronizando hierarquia" text="Consultando os cargos atuais no Roblox..."/>:error?<EmptyState title="Hierarquia indisponível" text={error}/>:<div className="hierarchy-list">{roles.map((role,index)=><article className="hierarchy-role" key={role.id}><span className="hierarchy-order">#{String(role.rank).padStart(3,'0')}</span><div><b>{role.name}</b><small>{selected} · cargo oficial da comunidade</small></div><em>{index===0?'TOPO':index===roles.length-1?'BASE':'ATIVO'}</em></article>)}</div>}</article></div>}
+
 function CapacitacaoView(){
   return<div className="workspace-grid"><article className="panel capacitacao-panel"><div className="capacitacao-card"><div style={{width:80,height:80,borderRadius:'50%',background:'var(--bg)',margin:'0 auto 12px',border:'3px solid var(--accent)',display:'grid',placeItems:'center',color:'var(--accent)',fontSize:24,fontWeight:700}}>CE</div><h2>ComandanteEB</h2><small>[CR] Criador</small><div className="cdp-status done"><span className="cdp-icon">✓</span><div><b>Sua CDP acabou</b></div></div></div></article><aside className="panel help"><span className="kicker">CAPACITAÇÃO</span><h2>Sobre a CDP</h2><p>A Capacitação de Desenvolvimento Pessoal é obrigatória para progressão de patente.</p><ul><li>Cada patente tem um tempo mínimo</li><li>Após completar, elegível para promoção</li><li>O instrutor registra o treino no sistema</li></ul></aside></div>}
 
-function TreinamentosView(){
-  const[tab,setTab]=useState<'exercicio'|'divisao'|null>(null);
-  const[selectedDiv,setSelectedDiv]=useState('');
-  const exercicios=['Tiro ao alvo','Navegação terrestre','Primeiros socorros','Combate corpo a corpo','Instruções de rádio','Marcha de resistência'];
-  const divisaoTreinos:Record<string,string[]>={
-    'BFE':['Operações especiais','Resgate de reféns','Infantaria leve','Combate urbano'],
-    'CIE':['Inteligência tática','Interceptação','Análise de ameaças','Criptografia'],
-    'BAC':['Ações de comando','Assalto a edifícios','Infiltração','DDL'],
-    'BPE':['Policiamento ostensivo','Controle de distúrbios','Proteção de autoridades','Trânsito'],
-    'STAFF':['Moderation','Suporte ao membro','Relatórios','Gestão']
-  };
-  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">ACADEMIA</span><h2>Treinamentos</h2></div></div>
-{!tab?<div className="treino-select"><button className="treino-option" onClick={()=>setTab('exercicio')}><span className="treino-icon">EX</span><div><b>Exército</b><small>Treinos de patente para todos os membros</small></div><strong>→</strong></button><button className="treino-option" onClick={()=>setTab('divisao')}><span className="treino-icon">DV</span><div><b>Divisões</b><small>Treinos específicos de cada divisão</small></div><strong>→</strong></button></div>
-:tab==='exercicio'?
-<div><button className="back-btn" onClick={()=>setTab(null)}>← Voltar</button><h3 style={{margin:'12px 0',color:'var(--text)'}}>Treinos do Exército</h3><div className="records">{exercicios.map(t=><div className="record" key={t}><span className="record-avatar">TR</span><div><b>{t}</b><small>Treino obrigatório</small></div><em>ATIVO</em></div>)}</div></div>
-:
-<div><button className="back-btn" onClick={()=>setTab(null)}>← Voltar</button><h3 style={{margin:'12px 0',color:'var(--text)'}}>Selecione a divisão</h3>
-{!selectedDiv?<div className="treino-select">{Object.keys(divisaoTreinos).map(d=><button className="treino-option" key={d} onClick={()=>setSelectedDiv(d)}><span className="treino-icon">DV</span><div><b>{d}</b><small>{divisaoTreinos[d].length} treinos</small></div><strong>→</strong></button>)}</div>
-:<div><button className="back-btn" onClick={()=>setSelectedDiv('')}>← Voltar</button><h3 style={{margin:'12px 0',color:'var(--text)'}}>Treinos — {selectedDiv}</h3><div className="records">{divisaoTreinos[selectedDiv].map(t=><div className="record" key={t}><span className="record-avatar">TR</span><div><b>{t}</b><small>Treino divisional</small></div><em>ATIVO</em></div>)}</div></div>}
-</div>}</article></div>}
+function TreinamentosView(){return<TrainingRegistration instructor="gabribor-sola" preview/>}
 
 function PromocoesView(){
-  return <PreviewActionView mode="promocao"/>;
+  return <RankChangeWorkflow mode="promotion" preview/>;
 }
 
 function RebaixamentosView(){
-  return <PreviewActionView mode="rebaixamento"/>;
+  return <RankChangeWorkflow mode="demotion" preview/>;
 }
-
-function PreviewActionView({mode}:{mode:'promocao'|'rebaixamento'}){
-  const[search,setSearch]=useState('');
-  const[found,setFound]=useState(false);
-  const[done,setDone]=useState(false);
-  const isPromotion=mode==='promocao';
-  const doSearch=()=>{if(search.trim()){setFound(true);setDone(false)}};
-  const finish=()=>{setDone(true);setTimeout(()=>setDone(false),2200)};
-  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">{isPromotion?'CARREIRA':'DISCIPLINA'}</span><h2>{isPromotion?'Promoções':'Rebaixamentos'}</h2></div></div>
-<label className="workspace-search"><span className="search-code" aria-hidden="true">BUSCA</span><input placeholder="Username ou ID" value={search} onChange={e=>{setSearch(e.target.value);setFound(false)}} onKeyDown={e=>e.key==='Enter'&&doSearch()}/><button type="button" className="primary" disabled={!search.trim()} onClick={doSearch}>Buscar</button></label>
-{found?<div className="member-action-card"><div className="member-header"><span className="member-avatar avatar-fallback">SM</span><div><b>{search}</b><small>[CB] Cabo · BPE</small><small>ID demonstrativo: 391027</small></div></div>{done?<div className={`action-success${isPromotion?'':' danger'}`}><span>{isPromotion?'↑':'↓'}</span><b>{isPromotion?'Promoção simulada':'Rebaixamento simulado'}</b></div>:<button type="button" className={isPromotion?'primary':'danger-btn'} onClick={finish}>{isPromotion?'↑ Simular promoção':'↓ Simular rebaixamento'}</button>}</div>:<EmptyState title="Busque um militar" text="Digite um nome ou ID para testar este fluxo no preview."/>}</article></div>}
 
 function RegistrosView(){
   return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">AUDITORIA</span><h2>Registros</h2></div></div>
@@ -184,15 +169,6 @@ function TreinosConfigView(){
 <div className="records">{treinos.map((t,index)=><div className="record" key={`${t}-${index}`}><span className="record-avatar">TR</span><div><b>{t}</b><small>Treino obrigatório</small></div><button type="button" className="danger-btn-sm" aria-label={`Remover ${t}`} onClick={()=>setTreinos(current=>current.filter((_,itemIndex)=>itemIndex!==index))}>Remover</button></div>)}</div></>}
 
 function ConfiguracoesView(){
-  const[webhook,setWebhook]=useState('');
-  const[saved,setSaved]=useState(false);
-  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">SISTEMA</span><h2>Configurações</h2></div></div>
-<h3 style={{margin:'12px 0',color:'var(--text)'}}>Integração Discord</h3>
-<p style={{color:'var(--muted)',fontSize:13,marginBottom:12}}>Conecte os canais do Discord para enviar logs.</p>
-<div className="config-form"><label htmlFor="preview-webhook">Webhook URL — Promoções</label><input id="preview-webhook" placeholder="https://discord.com/api/webhooks/..." value={webhook} onChange={e=>{setWebhook(e.target.value);setSaved(false)}}/><label>Webhook URL — Rebaixamentos</label><input placeholder="https://discord.com/api/webhooks/..."/><label>Webhook URL — Treinos</label><input placeholder="https://discord.com/api/webhooks/..."/><label>Webhook URL — Logs</label><input placeholder="https://discord.com/api/webhooks/..."/></div>
-{saved?<div className="action-success"><span>✓</span><b>Configuração simulada</b></div>:<button type="button" className="primary" style={{marginTop:12}} onClick={()=>{setSaved(true);setTimeout(()=>setSaved(false),2200)}}>Salvar no preview</button>}
-<h3 style={{margin:'24px 0 12px',color:'var(--text)'}}>Status da Integração</h3>
-<div className="records"><div className="record"><span className="record-avatar" style={{background:'#1a2a1a'}}>RB</span><div><b>Roblox OAuth</b><small>Conectado · Grupo 521106467</small></div><em style={{color:'var(--accent)'}}>ATIVO</em></div>
-<div className="record"><span className="record-avatar">DC</span><div><b>Discord Webhooks</b><small>{webhook?'Configurado no preview':'Aguardando configuração'}</small></div><em>{webhook?'ATIVO':'PENDENTE'}</em></div></div></article></div>}
+  return<DiscordConfiguration preview/>}
 
 function getTimeAgo(ts:string):string{const d=Date.now()-new Date(ts).getTime();const m=Math.floor(d/60000);if(m<1)return'Agora';if(m<60)return`há ${m}min`;const h=Math.floor(m/60);if(h<24)return`há ${h}h`;return`há ${Math.floor(h/24)}d`}

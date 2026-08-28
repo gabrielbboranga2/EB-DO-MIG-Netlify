@@ -8,6 +8,7 @@ import{BrandEmblem}from'./BrandEmblem';
 const COMMAND_NAV=[
   {label:'Visão geral',code:'VG'},
   {label:'Militares',code:'EF'},
+  {label:'Hierarquia',code:'HQ'},
   {label:'Capacitação · CDP',code:'CD'},
   {label:'Treinamentos',code:'TR'},
   {label:'Promoções · UP',code:'UP'},

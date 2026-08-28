@@ -3,11 +3,15 @@
 import{useEffect,useState}from'react';
 import{DashboardShell,EmptyState,PanelHead}from'./components/DashboardShell';
 import{BrandEmblem}from'./components/BrandEmblem';
+import{TrainingRegistration}from'./components/TrainingRegistration';
+import{DiscordConfiguration}from'./components/DiscordConfiguration';
+import{RankChangeWorkflow}from'./components/RankChangeWorkflow';
 const DIVISION_SIGLAS=['EXÉRCITO','STAFF','BFE','CIE','BAC','BPE'];
 const EVENT_ICONS:Record<string,string>={'promocao':'UP','rebaixamento':'RB','treino':'TR','verificacao':'VR','login':'LG'};
 type RobloxUser={id:string;username:string;avatar:string;rank?:string;rankNumber?:number;roleId?:string;isCreator?:boolean;isAdmin?:boolean;isHighCommand?:boolean;division?:string;divisions?:Array<{id:number;name:string;role:string;roleId?:string}>};
 type DashboardStats={totalSincronizados:number;emCdp:number;treinosMes:number;acoesRegistradas:number;ultimaSincronizacao:string|null;divisoes:Record<string,number>;atividadesRecentes:Array<{id:string;tipo:string;userId:string;username:string;descricao:string;timestamp:string}>};
 type Member={userId:string;username:string;displayName:string;rankName:string;division:string;divisions:string[];avatar:string;roleId:string;rankNumber:number;cdpActive:boolean;cdpStartedAt:string|null;cdpEndsAt:string|null};
+type HierarchyGroup={groupId:number;sigla:string;name:string;roles:Array<{id:string;name:string;rank:number}>};
 
 function isDashboardStats(value:unknown):value is DashboardStats{
   if(!value||typeof value!=='object')return false;
@@ -31,8 +35,9 @@ export default function Home(){
   const pages:Record<string,()=>React.ReactElement>={
     'Visão geral':()=><VisaoGeral user={user} stats={stats}/>,
     'Militares':()=><MilitaresView/>,
+    'Hierarquia':()=><HierarchyView/>,
     'Capacitação · CDP':()=><CapacitacaoView user={user}/>,
-    'Treinamentos':()=><TreinamentosView/>,
+    'Treinamentos':()=><TreinamentosView user={user}/>,
     'Promoções · UP':()=><PromocoesView/>,
     'Rebaixamentos':()=><RebaixamentosView/>,
     'Registros':()=><RegistrosView user={user}/>,
@@ -93,57 +98,30 @@ function MilitaresView(){
 {!loading&&!error&&totalPages>1&&<div className="roster-pagination"><button type="button" disabled={page<=1} onClick={()=>setPage(current=>Math.max(1,current-1))}>← Anterior</button><span>Página <b>{page}</b> de <b>{totalPages}</b></span><button type="button" disabled={page>=totalPages} onClick={()=>setPage(current=>Math.min(totalPages,current+1))}>Próxima →</button></div>}</article>
 {selected?<aside className="panel member-detail roster-detail"><div className="member-header"><span className="member-avatar avatar-fallback">{selected.username.slice(0,2).toUpperCase()}{selected.avatar&&<img src={selected.avatar} alt="" onError={e=>{(e.currentTarget as HTMLImageElement).style.display='none'}}/>}</span><div><b>{selected.username}</b>{selected.displayName&&selected.displayName!==selected.username&&<small>{selected.displayName}</small>}<small>{selected.rankName}</small><small>Comunidades: {selected.division}</small><small>ID: {selected.userId}</small></div></div><div className={`member-cdp-status ${selected.cdpActive?'active':'inactive'}`}><span>CDP</span><b>{selected.cdpActive?'Em andamento':'Não está em CDP'}</b><small>{selected.cdpActive?'Capacitação ativa':'Nenhum ciclo de capacitação iniciado'}</small></div><a className="member-profile-link" href={`https://www.roblox.com/users/${selected.userId}/profile`} target="_blank" rel="noreferrer">Abrir perfil no Roblox ↗</a></aside>:<aside className="panel help roster-help"><span className="kicker">COMUNIDADES CONECTADAS</span><h2>Selecione um integrante</h2><p>Clique em um registro para conferir patente, comunidades e situação da CDP.</p><div className="community-summary">{DIVISION_SIGLAS.map(sigla=><div key={sigla}><span>{sigla}</span><b>{counts[sigla]??'—'}</b></div>)}</div><div className="initial-cdp-note"><i/>Todos começam fora da CDP</div></aside>}</div>}
 
+function HierarchyView(){
+  const[groups,setGroups]=useState<HierarchyGroup[]>([]);
+  const[selected,setSelected]=useState('EXÉRCITO');
+  const[query,setQuery]=useState('');
+  const[loading,setLoading]=useState(true);
+  const[error,setError]=useState('');
+  useEffect(()=>{fetch('/api/hierarquia').then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error);return data}).then(data=>setGroups(data.groups||[])).catch(()=>setError('Não foi possível consultar os cargos. Verifique a chave Open Cloud.')).finally(()=>setLoading(false))},[]);
+  const group=groups.find(item=>item.sigla===selected)||groups[0];
+  const roles=(group?.roles||[]).filter(role=>!query||role.name.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR')));
+  return<div className="hierarchy-page"><div className="hero hierarchy-hero"><div><span className="kicker">ESTRUTURA OFICIAL</span><h1>Hierarquia militar</h1><p>Cargos carregados diretamente das comunidades do EB DO MIG.</p></div><div className="hero-status"><i/>6 COMUNIDADES</div></div><article className="panel hierarchy-panel"><div className="workspace-toolbar"><div><span className="kicker">COMUNIDADE</span><h2>{group?.name||'Hierarquia das comunidades'}</h2></div><span className="panel-meta">{loading?'SINCRONIZANDO':`${roles.length} CARGOS`}</span></div><div className="division-tabs hierarchy-tabs">{DIVISION_SIGLAS.map(sigla=><button type="button" key={sigla} className={selected===sigla?'active':''} onClick={()=>{setSelected(sigla);setQuery('')}}>{sigla}</button>)}</div><label className="workspace-search"><span className="search-code" aria-hidden="true">BUSCA</span><input placeholder="Buscar cargo ou patente" value={query} onChange={event=>setQuery(event.target.value)}/></label>{loading?<EmptyState title="Sincronizando hierarquia" text="Consultando os cargos oficiais no Roblox..."/>:error?<EmptyState title="Hierarquia indisponível" text={error}/>:<div className="hierarchy-list">{roles.map((role,index)=><article className="hierarchy-role" key={role.id}><span className="hierarchy-order">#{String(role.rank).padStart(3,'0')}</span><div><b>{role.name}</b><small>{group.sigla} · ordem oficial do grupo</small></div><em>{index===0?'TOPO':index===roles.length-1?'BASE':'ATIVO'}</em></article>)}</div>}</article></div>}
+
 function CapacitacaoView({user}:{user:RobloxUser}){
   const[cdpStatus,setCdpStatus]=useState<{active:boolean;fim?:string}|null>(null);
   useEffect(()=>{fetch('/api/dashboard/stats').then(r=>r.json()).then(d=>{setCdpStatus({active:d.emCdp>0})}).catch(()=>setCdpStatus({active:false}))},[]);
   const timeLeft=cdpStatus?.active?'2h 34min restantes':'';
   return<div className="workspace-grid"><article className="panel capacitacao-panel"><div className="capacitacao-card"><img className="capacitacao-avatar" src={user.avatar||''} alt="" onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}}/><h2>{user.username}</h2><small>{user.rank||'Membro'}</small><div className={'cdp-status '+(cdpStatus?.active?'active':'done')}><span className="cdp-icon">{cdpStatus?.active?'◷':'✓'}</span><div><b>{cdpStatus?.active?'Sua CDP está em andamento':'Sua CDP acabou'}</b>{cdpStatus?.active&&<small>{timeLeft}</small>}</div></div></div></article><aside className="panel help"><span className="kicker">CAPACITAÇÃO</span><h2>Sobre a CDP</h2><p>A Capacitação de Desenvolvimento Pessoal é obrigatória para progressão de patente.</p><ul><li>Cada patente tem um tempo mínimo de CDP</li><li>Após completar, o militar fica elegível para promoção</li><li>O instrutor registra o treino no sistema</li></ul></aside></div>}
 
-function TreinamentosView(){
-  const[tab,setTab]=useState<'exercicio'|'divisao'|null>(null);
-  const[selectedDiv,setSelectedDiv]=useState('');
-  const exercicios=['Tiro ao alvo','Navegação terrestre','Primeiros socorros','Combate corpo a corpo','Instruções de rádio','Marcha de resistência'];
-  const divisaoTreinos:Record<string,string[]>={
-    'BFE':['Operações especiais','Resgate de reféns','Infantaria leve','Combate urbano'],
-    'CIE':['Inteligência tática','Interceptação','Análise de ameaças','Criptografia'],
-    'BAC':['Ações de comando','Assalto a edifícios','Infiltração','DDL'],
-    'BPE':['Policiamento ostensivo','Controle de distúrbios','Proteção de autoridades','Trânsito'],
-    'STAFF':['Moderation','Suporte ao membro','Relatórios','Gestão']
-  };
-  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">ACADEMIA</span><h2>Treinamentos</h2></div></div>
-{!tab?<div className="treino-select"><button className="treino-option" onClick={()=>setTab('exercicio')}><span className="treino-icon">EX</span><div><b>Exército</b><small>Treinos de patente para todos os membros</small></div><strong>→</strong></button><button className="treino-option" onClick={()=>setTab('divisao')}><span className="treino-icon">DV</span><div><b>Divisões</b><small>Treinos específicos de cada divisão</small></div><strong>→</strong></button></div>
-:tab==='exercicio'?
-<div><button className="back-btn" onClick={()=>setTab(null)}>← Voltar</button><h3 style={{margin:'12px 0',color:'var(--text)'}}>Treinos do Exército</h3><div className="records">{exercicios.map(t=><div className="record" key={t}><span className="record-avatar">TR</span><div><b>{t}</b><small>Treino obrigatório</small></div><em>ATIVO</em></div>)}</div></div>
-:
-<div><button className="back-btn" onClick={()=>setTab(null)}>← Voltar</button><h3 style={{margin:'12px 0',color:'var(--text)'}}>Selecione a divisão</h3>
-{!selectedDiv?<div className="treino-select">{Object.keys(divisaoTreinos).map(d=><button className="treino-option" key={d} onClick={()=>setSelectedDiv(d)}><span className="treino-icon">DV</span><div><b>{d}</b><small>{divisaoTreinos[d].length} treinos</small></div><strong>→</strong></button>)}</div>
-:<div><button className="back-btn" onClick={()=>setSelectedDiv('')}>← Voltar</button><h3 style={{margin:'12px 0',color:'var(--text)'}}>Treinos — {selectedDiv}</h3><div className="records">{divisaoTreinos[selectedDiv].map(t=><div className="record" key={t}><span className="record-avatar">TR</span><div><b>{t}</b><small>Treino divisional</small></div><em>ATIVO</em></div>)}</div></div>}
-</div>}
-</article></div>}
+function TreinamentosView({user}:{user:RobloxUser}){return<TrainingRegistration instructor={user.username}/>}
 
 function PromocoesView(){
-  const[search,setSearch]=useState('');
-  const[member,setMember]=useState<Member|null>(null);
-  const[loading,setLoading]=useState(false);
-  const[done,setDone]=useState(false);
-  const doSearch=()=>{if(!search)return;setLoading(true);fetch(`/api/militares/search?q=${encodeURIComponent(search)}`).then(r=>r.json()).then(d=>{setMember(d.members?.[0]||null);setLoading(false)}).catch(()=>setLoading(false))};
-  const promote=()=>{setDone(true);setTimeout(()=>setDone(false),2000)};
-  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">CARREIRA</span><h2>Promoções</h2></div></div>
-<label className="workspace-search"><span className="search-code" aria-hidden="true">BUSCA</span><input placeholder="Username ou ID" value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doSearch()}/><button className="primary" onClick={doSearch} disabled={loading||!search}>{loading?'Buscando...':'Buscar'}</button></label>
-{member?<div className="member-action-card"><div className="member-header"><img src={member.avatar||''} alt="" className="member-avatar" onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}}/><div><b>{member.username}</b><small>{member.rankName} · {member.division}</small><small>ID: {member.userId}</small></div></div>{done?<div className="action-success"><span>✓</span><b>Promoção registrada</b></div>:<button className="primary" onClick={promote}>↑ Realizar Promoção</button>}</div>
-:search&&!loading?<EmptyState text="Militar não encontrado no sistema."/>:<EmptyState text="Digite o username ou ID de um militar para promover."/>}</article></div>}
+  return<RankChangeWorkflow mode="promotion"/>}
 
 function RebaixamentosView(){
-  const[search,setSearch]=useState('');
-  const[member,setMember]=useState<Member|null>(null);
-  const[loading,setLoading]=useState(false);
-  const[done,setDone]=useState(false);
-  const doSearch=()=>{if(!search)return;setLoading(true);fetch(`/api/militares/search?q=${encodeURIComponent(search)}`).then(r=>r.json()).then(d=>{setMember(d.members?.[0]||null);setLoading(false)}).catch(()=>setLoading(false))};
-  const demote=()=>{setDone(true);setTimeout(()=>setDone(false),2000)};
-  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">DISCIPLINA</span><h2>Rebaixamentos</h2></div></div>
-<label className="workspace-search"><span className="search-code" aria-hidden="true">BUSCA</span><input placeholder="Username ou ID" value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doSearch()}/><button className="primary" onClick={doSearch} disabled={loading||!search}>{loading?'Buscando...':'Buscar'}</button></label>
-{member?<div className="member-action-card"><div className="member-header"><img src={member.avatar||''} alt="" className="member-avatar" onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}}/><div><b>{member.username}</b><small>{member.rankName} · {member.division}</small><small>ID: {member.userId}</small></div></div>{done?<div className="action-success danger"><span>↓</span><b>Rebaixamento registrado</b></div>:<button className="danger-btn" onClick={demote}>↓ Registrar Rebaixamento</button>}</div>
-:search&&!loading?<EmptyState text="Militar não encontrado no sistema."/>:<EmptyState text="Digite o username ou ID de um militar para rebaixar."/>}</article></div>}
+  return<RankChangeWorkflow mode="demotion"/>}
 
 function RegistrosView({user}:{user:RobloxUser}){
   const logs=[
@@ -227,16 +205,7 @@ function TreinosConfigView(){
 <div className="records">{treinos.map((t,i)=><div className="record" key={t}><span className="record-avatar">TR</span><div><b>{t}</b><small>Treino obrigatório</small></div><button type="button" className="danger-btn-sm" onClick={()=>remove(i)}>Remover</button></div>)}</div></>}
 
 function ConfiguracoesView(){
-  const[webhook,setWebhook]=useState('');
-  const[saved,setSaved]=useState(false);
-  return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">SISTEMA</span><h2>Configurações</h2></div></div>
-<h3 style={{margin:'12px 0',color:'var(--text)'}}>Integração Discord</h3>
-<p style={{color:'var(--muted)',fontSize:13,marginBottom:12}}>Conecte os canais do Discord para enviar logs de promoções, rebaixamentos e treinos.</p>
-<div className="config-form"><label>Webhook URL — Promoções</label><input placeholder="https://discord.com/api/webhooks/..." value={webhook} onChange={e=>setWebhook(e.target.value)}/><label>Webhook URL — Rebaixamentos</label><input placeholder="https://discord.com/api/webhooks/..."/><label>Webhook URL — Treinos</label><input placeholder="https://discord.com/api/webhooks/..."/><label>Webhook URL — Logs</label><input placeholder="https://discord.com/api/webhooks/..."/></div>
-{saved?<div className="action-success"><span>✓</span><b>Configurações salvas!</b></div>:<button className="primary" style={{marginTop:12}} onClick={()=>{setSaved(true);setTimeout(()=>setSaved(false),2000)}}>Salvar configurações</button>}
-<h3 style={{margin:'24px 0 12px',color:'var(--text)'}}>Status da Integração</h3>
-<div className="records"><div className="record"><span className="record-avatar" style={{background:'#1a2a1a'}}>RB</span><div><b>Roblox OAuth</b><small>Conectado · Grupo 521106467</small></div><em style={{color:'var(--accent)'}}>ATIVO</em></div>
-<div className="record"><span className="record-avatar" style={{background:'#1a1a2a'}}>DC</span><div><b>Discord Webhooks</b><small>{webhook?'Configurado':'Aguardando configuração'}</small></div><em>{webhook?'ATIVO':'PENDENTE'}</em></div></div></article></div>}
+  return<DiscordConfiguration/>}
 
 function getTimeAgo(ts:string):string{const d=Date.now()-new Date(ts).getTime();const m=Math.floor(d/60000);if(m<1)return'Agora';if(m<60)return`há ${m}min`;const h=Math.floor(m/60);if(h<24)return`há ${h}h`;return`há ${Math.floor(h/24)}d`}
 

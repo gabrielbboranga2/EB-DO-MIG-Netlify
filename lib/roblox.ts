@@ -24,13 +24,38 @@ export interface UserGroupMembership{
   rankNumber:number;
 }
 
-type GroupMembership={user?:string;role?:string;roles?:string[]};
+export interface LiveGroupRole{
+  id:string;
+  name:string;
+  rank:number;
+}
+
+export interface LiveGroupHierarchy{
+  groupId:number;
+  sigla:string;
+  name:string;
+  roles:LiveGroupRole[];
+}
+
+type GroupMembership={path?:string;user?:string;role?:string;roles?:string[]};
 type GroupRole={id?:string;path?:string;displayName?:string;rank?:number};
+type PublicGroupRole={id:number;name:string;rank:number};
 type GroupData={sigla:string;groupId:number;memberships:GroupMembership[];roles:Map<string,GroupRole>};
 
 const CACHE_TTL=60_000;
 let rosterCache:{expires:number;members:LiveMember[]}|null=null;
 let rosterRequest:Promise<LiveMember[]>|null=null;
+let hierarchyCache:{expires:number;groups:LiveGroupHierarchy[]}|null=null;
+let hierarchyRequest:Promise<LiveGroupHierarchy[]>|null=null;
+
+export interface RankChangeResult{
+  groupId:number;
+  community:string;
+  userId:string;
+  direction:'promotion'|'demotion';
+  current:{id:string;name:string;rank:number};
+  target:{id:string;name:string;rank:number};
+}
 
 export async function getLiveRoster():Promise<LiveMember[]>{
   if(rosterCache&&rosterCache.expires>Date.now())return rosterCache.members;
@@ -41,6 +66,17 @@ export async function getLiveRoster():Promise<LiveMember[]>{
     return members;
   }).catch(error=>{rosterRequest=null;throw error});
   return rosterRequest;
+}
+
+export async function getLiveHierarchies():Promise<LiveGroupHierarchy[]>{
+  if(hierarchyCache&&hierarchyCache.expires>Date.now())return hierarchyCache.groups;
+  if(hierarchyRequest)return hierarchyRequest;
+  hierarchyRequest=loadHierarchies().then(groups=>{
+    hierarchyCache={groups,expires:Date.now()+CACHE_TTL};
+    hierarchyRequest=null;
+    return groups;
+  }).catch(error=>{hierarchyRequest=null;throw error});
+  return hierarchyRequest;
 }
 
 export async function getUserGroupMemberships(userId:string):Promise<UserGroupMembership[]>{
@@ -114,6 +150,59 @@ async function loadRoster():Promise<LiveMember[]>{
       cdpEndsAt:null,
     };
   }).sort((left,right)=>right.rankNumber-left.rankNumber||left.username.localeCompare(right.username,'pt-BR'));
+}
+
+export async function previewRankChange(userId:string,groupId:number,direction:'promotion'|'demotion'):Promise<RankChangeResult>{
+  const apiKey=process.env.ROBLOX_API_KEY?.trim();
+  if(!apiKey)throw new Error('ROBLOX_API_KEY não configurada.');
+  const division=DIVISOES.find(item=>item.groupId===groupId);
+  if(!division)throw new Error('Comunidade inválida.');
+  const membership=await getGroupMembershipForUser(groupId,userId,apiKey);
+  if(!membership)throw new Error('Este usuário não pertence à comunidade selecionada.');
+  const currentId=resourceId(membership.role)||resourceId(membership.roles?.at(-1));
+  if(!currentId)throw new Error('Não foi possível identificar o cargo atual.');
+  const hierarchy=(await getLiveHierarchies()).find(group=>group.groupId===groupId);
+  if(!hierarchy)throw new Error('Hierarquia indisponível.');
+  const currentIndex=hierarchy.roles.findIndex(role=>role.id===currentId);
+  if(currentIndex<0)throw new Error('O cargo atual não existe mais na hierarquia.');
+  const targetIndex=direction==='promotion'?currentIndex-1:currentIndex+1;
+  const current=hierarchy.roles[currentIndex];
+  const target=hierarchy.roles[targetIndex];
+  if(!target)throw new Error(direction==='promotion'?'O militar já está no cargo mais alto.':'O militar já está no cargo mais baixo.');
+  return{groupId,community:division.sigla,userId,direction,current,target};
+}
+
+export async function applyRankChange(userId:string,groupId:number,direction:'promotion'|'demotion',expectedTargetRoleId:string):Promise<RankChangeResult>{
+  const apiKey=process.env.ROBLOX_API_KEY?.trim();
+  if(!apiKey)throw new Error('ROBLOX_API_KEY não configurada.');
+  const change=await previewRankChange(userId,groupId,direction);
+  if(change.target.id!==expectedTargetRoleId)throw new Error('A hierarquia mudou. Revise a alteração antes de confirmar.');
+  const membershipId=userId;
+  const base=`https://apis.roblox.com/cloud/v2/groups/${groupId}/memberships/${membershipId}`;
+  const assign=await fetch(`${base}:assignRole`,{method:'POST',headers:{'x-api-key':apiKey,'content-type':'application/json'},body:JSON.stringify({role:`groups/${groupId}/roles/${change.target.id}`}),cache:'no-store'});
+  if(!assign.ok)throw new Error(await robloxWriteError(assign,'O Roblox recusou a atribuição do novo cargo.'));
+  const unassign=await fetch(`${base}:unassignRole`,{method:'POST',headers:{'x-api-key':apiKey,'content-type':'application/json'},body:JSON.stringify({role:`groups/${groupId}/roles/${change.current.id}`}),cache:'no-store'});
+  if(!unassign.ok)throw new Error(await robloxWriteError(unassign,'O novo cargo foi atribuído, mas o cargo anterior não pôde ser removido.'));
+  rosterCache=null;hierarchyCache=null;
+  return change;
+}
+
+async function robloxWriteError(response:Response,fallback:string){
+  try{const data=await response.json()as{message?:string;error?:{message?:string}};return data.error?.message||data.message||`${fallback} Código ${response.status}.`}catch{return`${fallback} Código ${response.status}.`}
+}
+
+async function loadHierarchies():Promise<LiveGroupHierarchy[]>{
+  return Promise.all(DIVISOES.map(async division=>{
+    const response=await fetch(`https://groups.roblox.com/v1/groups/${division.groupId}/roles`,{cache:'no-store'});
+    if(!response.ok)throw new Error(`Falha ao consultar cargos públicos do grupo ${division.groupId} (${response.status}).`);
+    const data=await response.json()as{roles?:PublicGroupRole[]};
+    return{
+      groupId:division.groupId,
+      sigla:division.sigla,
+      name:division.nome,
+      roles:(data.roles||[]).map(role=>({id:String(role.id),name:role.name||'Cargo sem nome',rank:role.rank||0})).sort((left,right)=>right.rank-left.rank||left.name.localeCompare(right.name,'pt-BR')),
+    };
+  }));
 }
 
 async function listGroupMemberships(groupId:number,apiKey:string):Promise<GroupMembership[]>{

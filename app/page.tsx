@@ -8,7 +8,7 @@ import{DiscordConfiguration}from'./components/DiscordConfiguration';
 import{RankChangeWorkflow}from'./components/RankChangeWorkflow';
 const DIVISION_SIGLAS=['EXÉRCITO','STAFF','BFE','CIE','BAC','BPE'];
 const EVENT_ICONS:Record<string,string>={'promocao':'UP','rebaixamento':'RB','treino':'TR','verificacao':'VR','login':'LG'};
-type RobloxUser={id:string;username:string;avatar:string;rank?:string;rankNumber?:number;roleId?:string;isCreator?:boolean;isAdmin?:boolean;isHighCommand?:boolean;division?:string;divisions?:Array<{id:number;name:string;role:string;roleId?:string}>};
+type RobloxUser={id:string;username:string;avatar:string;rank?:string;rankNumber?:number;roleId?:string;isCreator?:boolean;isAdmin?:boolean;isHighCommand?:boolean;division?:string;divisions?:Array<{id:number;name:string;role:string;roleId?:string;rankNumber?:number}>};
 type DashboardStats={totalSincronizados:number;emCdp:number;treinosMes:number;acoesRegistradas:number;ultimaSincronizacao:string|null;divisoes:Record<string,number>;atividadesRecentes:Array<{id:string;tipo:string;userId:string;username:string;descricao:string;timestamp:string}>};
 type Member={userId:string;username:string;displayName:string;rankName:string;division:string;divisions:string[];avatar:string;roleId:string;rankNumber:number;cdpActive:boolean;cdpStartedAt:string|null;cdpEndsAt:string|null};
 type HierarchyGroup={groupId:number;sigla:string;name:string;roles:Array<{id:string;name:string;rank:number}>};
@@ -115,7 +115,7 @@ function CapacitacaoView({user}:{user:RobloxUser}){
   const timeLeft=cdpStatus?.active?'2h 34min restantes':'';
   return<div className="workspace-grid"><article className="panel capacitacao-panel"><div className="capacitacao-card"><img className="capacitacao-avatar" src={user.avatar||''} alt="" onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}}/><h2>{user.username}</h2><small>{user.rank||'Membro'}</small><div className={'cdp-status '+(cdpStatus?.active?'active':'done')}><span className="cdp-icon">{cdpStatus?.active?'◷':'✓'}</span><div><b>{cdpStatus?.active?'Sua CDP está em andamento':'Sua CDP acabou'}</b>{cdpStatus?.active&&<small>{timeLeft}</small>}</div></div></div></article><aside className="panel help"><span className="kicker">CAPACITAÇÃO</span><h2>Sobre a CDP</h2><p>A Capacitação de Desenvolvimento Pessoal é obrigatória para progressão de patente.</p><ul><li>Cada patente tem um tempo mínimo de CDP</li><li>Após completar, o militar fica elegível para promoção</li><li>O instrutor registra o treino no sistema</li></ul></aside></div>}
 
-function TreinamentosView({user}:{user:RobloxUser}){return<TrainingRegistration instructor={user.username}/>}
+function TreinamentosView({user}:{user:RobloxUser}){return<TrainingRegistration instructor={user.username} instructorRank={user.rankNumber||0} instructorRole={user.rank||''} membershipRanks={(user.divisions||[]).map(item=>({sigla:item.name,rank:item.rankNumber||0,role:item.role}))}/>}
 
 function PromocoesView(){
   return<RankChangeWorkflow mode="promotion"/>}

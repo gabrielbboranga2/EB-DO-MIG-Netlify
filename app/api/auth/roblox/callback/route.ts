@@ -60,6 +60,7 @@ export async function GET(request:Request){
       name:membership.sigla,
       role:membership.roleName,
       roleId:membership.roleId,
+      rankNumber:membership.rankNumber,
     }));
     const primaryDivision=divisions.find(division=>division.id!==521106467);
     const isCreator=patente?.sigla==='CR'||main.rankNumber>=253;

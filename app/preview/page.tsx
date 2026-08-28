@@ -95,7 +95,7 @@ function HierarchyView(){
 function CapacitacaoView(){
   return<div className="workspace-grid"><article className="panel capacitacao-panel"><div className="capacitacao-card"><div style={{width:80,height:80,borderRadius:'50%',background:'var(--bg)',margin:'0 auto 12px',border:'3px solid var(--accent)',display:'grid',placeItems:'center',color:'var(--accent)',fontSize:24,fontWeight:700}}>CE</div><h2>ComandanteEB</h2><small>[CR] Criador</small><div className="cdp-status done"><span className="cdp-icon">✓</span><div><b>Sua CDP acabou</b></div></div></div></article><aside className="panel help"><span className="kicker">CAPACITAÇÃO</span><h2>Sobre a CDP</h2><p>A Capacitação de Desenvolvimento Pessoal é obrigatória para progressão de patente.</p><ul><li>Cada patente tem um tempo mínimo</li><li>Após completar, elegível para promoção</li><li>O instrutor registra o treino no sistema</li></ul></aside></div>}
 
-function TreinamentosView(){return<TrainingRegistration instructor="gabribor-sola" preview/>}
+function TreinamentosView(){return<TrainingRegistration instructor="gabribor-sola" instructorRank={9} instructorRole="[ASP] Aspirante a Oficial" membershipRanks={[{sigla:'STAFF',rank:4,role:'[ADM] Administrador'},{sigla:'BFE',rank:4,role:'[BFE] OFICIAL'},{sigla:'CIE',rank:4,role:'[CIE] OFICIAL'},{sigla:'BAC',rank:4,role:'[BAC] OFICIAL'},{sigla:'BPE',rank:4,role:'[BPE] OFICIAL'}]} preview/>}
 
 function PromocoesView(){
   return <RankChangeWorkflow mode="promotion" preview/>;

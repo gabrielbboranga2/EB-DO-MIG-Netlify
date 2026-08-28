@@ -1,5 +1,8 @@
 import{NextResponse}from'next/server';
 import{getSessionUser}from'@/lib/auth';
+import{getDivisaoBySigla}from'@/lib/divisoes-mig';
+import{getUserGroupMemberships}from'@/lib/roblox';
+import{getTrainingRule}from'@/lib/training-rules';
 
 export const dynamic='force-dynamic';
 export const runtime='nodejs';
@@ -13,9 +16,6 @@ export async function POST(request:Request){
   const session=await getSessionUser<Session>(request);
   if(!session)return NextResponse.json({error:'Sua sessão expirou. Entre novamente com o Roblox.'},{status:401});
 
-  const webhook=validWebhook(process.env.DISCORD_TRAININGS_WEBHOOK);
-  if(!webhook)return NextResponse.json({error:'O webhook de treinamentos ainda não foi configurado na Vercel.'},{status:503});
-
   try{
     const form=await request.formData();
     const community=clean(form.get('community'),30);
@@ -26,8 +26,17 @@ export async function POST(request:Request){
     try{participants=JSON.parse(String(form.get('participants')||'[]'))}catch{}
     participants=Array.from(new Set(participants.map(item=>clean(item,20)).filter(item=>/^[A-Za-z0-9_]{3,20}$/.test(item)))).slice(0,15);
 
-    if(!COMMUNITIES.has(community)||!training||observation.length<10||participants.length<1)return NextResponse.json({error:'Os dados do treinamento estão incompletos ou inválidos.'},{status:400});
+    const rule=getTrainingRule(community,training);
+    if(!COMMUNITIES.has(community)||!rule||observation.length<10||participants.length<1)return NextResponse.json({error:'Os dados do treinamento estão incompletos ou inválidos.'},{status:400});
     if(!(proof instanceof File)||!ALLOWED_TYPES.has(proof.type)||proof.size<1||proof.size>MAX_FILE_SIZE)return NextResponse.json({error:'Anexe uma foto JPG, PNG ou WEBP de até 8 MB.'},{status:400});
+    const division=getDivisaoBySigla(community);
+    if(!division)return NextResponse.json({error:'Comunidade de treinamento inválida.'},{status:400});
+    const memberships=await getUserGroupMemberships(session.id);
+    const instructorMembership=memberships.find(item=>item.groupId===division.groupId);
+    if(!instructorMembership)return NextResponse.json({error:`Você não pertence à comunidade ${community}.`},{status:403});
+    if(instructorMembership.rankNumber<rule.minInstructorRank)return NextResponse.json({error:`Seu cargo não pode conduzir ${rule.name}. Patente mínima: ${rule.minInstructorRole}.`},{status:403});
+    const webhook=validWebhook(process.env.DISCORD_TRAININGS_WEBHOOK);
+    if(!webhook)return NextResponse.json({error:'O webhook de treinamentos ainda não foi configurado na Vercel.'},{status:503});
 
     const extension=proof.type==='image/png'?'png':proof.type==='image/webp'?'webp':'jpg';
     const filename=`treinamento-${community.toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]+/g,'-')}-${Date.now()}.${extension}`;
@@ -37,10 +46,11 @@ export async function POST(request:Request){
       embeds:[{
         title:'Treinamento concluído',
         color:0xBDA866,
-        description:`**${training}** foi registrado com prova fotográfica.`,
+        description:`**${rule.name}** foi registrado com prova fotográfica.`,
         fields:[
           {name:'Comunidade',value:community,inline:true},
           {name:'Instrutor',value:`${escapeDiscord(session.username)}\n${escapeDiscord(session.rank||'Militar')}`,inline:true},
+          {name:'Regra de instrução',value:`Mínimo: ${escapeDiscord(rule.minInstructorRole)}`,inline:true},
           {name:`Participantes (${participants.length})`,value:participants.map(name=>`• ${escapeDiscord(name)}`).join('\n')},
           {name:'Relatório',value:escapeDiscord(observation)},
         ],

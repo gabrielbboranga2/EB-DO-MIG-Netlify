@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
+import {getConfiguredOrigin} from '@/lib/auth';
 import './globals.css';
 import './auth.css';
+import './visual-system.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.SITE_URL || 'http://localhost:3000'),
+  metadataBase: new URL(getConfiguredOrigin() || 'http://localhost:3000'),
   title: 'EB DO MIG | Central Militar',
   description: 'Central de comando, capacitação e gestão militar do EB DO MIG.',
   openGraph: {title:'EB DO MIG | Central Militar',description:'Central de comando, capacitação e gestão militar do EB DO MIG.',images:['/og.png']},

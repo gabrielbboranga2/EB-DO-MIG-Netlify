@@ -1,258 +1,85 @@
-/* ── Login page ── */
-.auth-loading,
-.login-page {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  background: #060a14;
-  color: var(--accent);
-  font: 800 18px "Segoe UI", Inter, sans-serif;
-  letter-spacing: .18em;
+.auth-loading{
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  background:var(--bg);
+  color:var(--gold);
+  font:800 14px Georgia,serif;
+  letter-spacing:.18em;
 }
 
-.login-page {
-  position: relative;
-  overflow: hidden;
-  background: #060a14;
+.login-page{
+  position:relative;
+  min-height:100vh;
+  padding:clamp(28px,5vw,72px);
+  display:grid;
+  grid-template-columns:minmax(0,1.15fr) minmax(360px,440px);
+  align-items:center;
+  gap:clamp(48px,9vw,140px);
+  overflow:hidden;
+  background:
+    linear-gradient(90deg,rgba(196,166,106,.025) 1px,transparent 1px),
+    linear-gradient(rgba(196,166,106,.025) 1px,transparent 1px),
+    radial-gradient(circle at 18% 18%,rgba(168,181,139,.08),transparent 30rem),
+    #0b0e0c;
+  background-size:48px 48px,48px 48px,auto,auto;
 }
 
-/* Background noise + gradient */
-.login-page::before {
-  content: '';
-  position: absolute;
-  inset: -8%;
-  z-index: 0;
-  background: linear-gradient(180deg, rgba(6,10,20,0.92) 0%, rgba(6,10,20,0.9) 65%, rgba(6,10,20,0.95) 100%),
-              radial-gradient(ellipse at 80% 20%, rgba(184,255,128,0.04), transparent 55%);
+.login-page::before{
+  content:'';
+  position:absolute;
+  top:-18vw;
+  left:-16vw;
+  width:42vw;
+  aspect-ratio:1;
+  border:1px solid rgba(196,166,106,.11);
+  border-radius:50%;
+  box-shadow:0 0 0 70px rgba(196,166,106,.015),0 0 0 140px rgba(196,166,106,.01);
 }
 
-.login-page::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.04;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' /%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' /%3E%3C/svg%3E");
+.login-intro,.login-card{position:relative;z-index:1}
+.login-intro{max-width:690px;padding-left:clamp(0px,3vw,44px)}
+.login-brand{display:flex;align-items:center;gap:13px;margin-bottom:clamp(70px,12vh,150px)}
+.login-brand b,.login-brand small{display:block}.login-brand b{font:700 14px Georgia,serif;letter-spacing:.1em}.login-brand small{margin-top:4px;color:var(--muted);font-size:9px;letter-spacing:.13em;text-transform:uppercase}
+.login-kicker{display:block;margin-bottom:17px;color:var(--gold);font-size:9px;font-weight:800;letter-spacing:.2em}
+.login-intro h1{max-width:670px;color:#f3f4f0;font-size:clamp(42px,5.5vw,74px);line-height:.98;font-weight:580;letter-spacing:-.055em}
+.login-intro h1 strong{color:var(--accent-strong);font-weight:580}
+.login-intro>div>p{max-width:560px;margin-top:24px;color:#9ba49a;font-size:13px;line-height:1.7}
+.login-features{margin-top:38px;display:flex;flex-wrap:wrap;gap:12px 24px;list-style:none}
+.login-features li{display:flex;align-items:center;gap:9px;color:#aeb6ac;font-size:10px}.login-features span{color:#6e786d;font:700 8px "Segoe UI",sans-serif;letter-spacing:.08em}
+
+.login-card{
+  width:100%;
+  padding:32px;
+  border:1px solid #333d33;
+  border-radius:15px;
+  background:rgba(20,25,20,.94);
+  box-shadow:0 28px 80px rgba(0,0,0,.34);
+}
+.login-card::before{content:'';position:absolute;top:-1px;left:30px;width:76px;height:2px;background:var(--gold)}
+.login-card-head{display:flex;align-items:center;gap:12px;margin-bottom:35px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+.login-card-head small,.login-card-head b{display:block}.login-card-head small{margin-bottom:4px;color:#748074;font-size:8px;font-weight:800;letter-spacing:.16em}.login-card-head b{font-size:11px;font-weight:650;color:var(--text-dim)}
+.login-card h2{font-size:25px;line-height:1.15;font-weight:620;letter-spacing:-.03em}.login-card>p{margin:9px 0 25px;color:var(--muted);font-size:11px;line-height:1.55}
+.login-error{margin-bottom:15px;padding:11px 12px;border:1px solid rgba(210,119,114,.35);border-radius:8px;background:rgba(210,119,114,.08);color:#e4a09b;font-size:10px;line-height:1.45}
+.login-roblox{
+  width:100%;min-height:48px;padding:11px 15px;display:flex;align-items:center;justify-content:center;gap:11px;
+  border:1px solid var(--accent);border-radius:9px;background:var(--accent);color:#11150f;
+  font-size:12px;font-weight:750;text-decoration:none;transition:background .16s,border-color .16s,transform .16s
+}
+.login-roblox:hover{background:var(--accent-strong);border-color:var(--accent-strong);transform:translateY(-1px)}
+.roblox-glyph{position:relative;width:16px;height:16px;display:block;border:3px solid currentColor;transform:rotate(12deg)}
+.roblox-glyph::after{content:'';position:absolute;inset:3px;background:var(--accent)}.login-roblox:hover .roblox-glyph::after{background:var(--accent-strong)}
+.login-security{margin-top:21px;padding-top:18px;display:flex;align-items:center;justify-content:center;gap:8px;border-top:1px solid var(--line);color:#869086;font-size:9px;font-weight:650;letter-spacing:.05em}.login-security span{color:var(--green)}
+.login-card>small{display:block;margin-top:11px;color:#697369;font-size:9px;text-align:center}
+.login-links{margin-top:22px;display:flex;justify-content:center;gap:15px;flex-wrap:wrap}.login-links a{color:#8c968c;font-size:9px;text-decoration:none;border-bottom:1px solid transparent}.login-links a:hover{color:var(--accent-strong);border-color:#66735d}
+.login-page footer{position:absolute;z-index:1;left:clamp(28px,5vw,72px);bottom:24px;display:flex;align-items:center;gap:9px;color:#596359;font-size:8px;font-weight:700;letter-spacing:.15em}.login-page footer i{width:3px;height:3px;border-radius:50%;background:var(--gold)}
+
+@media(max-width:920px){
+  .login-page{grid-template-columns:1fr;gap:40px;padding:32px 24px 72px;align-content:start;overflow:auto}
+  .login-intro{max-width:650px;padding-left:0}.login-brand{margin-bottom:54px}.login-intro h1{font-size:clamp(40px,9vw,62px)}.login-features{display:none}
+  .login-card{max-width:500px}.login-page footer{left:24px}
 }
 
-.login-card {
-  position: relative;
-  z-index: 1;
-  width: min(440px, calc(100vw - 32px));
-  padding: 40px 36px;
-  text-align: center;
-  border: 1px solid rgba(184,255,128,0.2);
-  background: linear-gradient(135deg, rgba(10,18,36,0.9), rgba(6,10,20,0.95));
-  border-radius: 24px;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 60px rgba(184,255,128,0.06) inset;
+@media(max-width:520px){
+  .login-page{padding:22px 16px 65px}.login-brand{margin-bottom:44px}.login-intro h1{font-size:39px}.login-intro>div>p{font-size:11px}.login-card{padding:25px 20px}.login-page footer{left:16px}
 }
-
-/* Corner accents */
-.login-card .corner-tl,
-.login-card .corner-tr,
-.login-card .corner-bl,
-.login-card .corner-br {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-}
-
-.login-card .corner-tl {
-  top: -1px;
-  left: -1px;
-  border-left: 2px solid var(--accent);
-  border-top: 2px solid var(--accent);
-  filter: drop-shadow(0 0 6px var(--accent));
-}
-
-.login-card .corner-tr {
-  top: -1px;
-  right: -1px;
-  border-right: 2px solid var(--gold);
-  border-top: 2px solid var(--gold);
-  filter: drop-shadow(0 0 6px var(--gold));
-}
-
-.login-card .corner-bl {
-  bottom: -1px;
-  left: -1px;
-  border-left: 2px solid var(--gold);
-  border-bottom: 2px solid var(--gold);
-  filter: drop-shadow(0 0 6px var(--gold));
-}
-
-.login-card .corner-br {
-  bottom: -1px;
-  right: -1px;
-  border-right: 2px solid var(--accent);
-  border-bottom: 2px solid var(--accent);
-  filter: drop-shadow(0 0 6px var(--accent));
-}
-
-.login-emblem {
-  display: block;
-  margin: 0 auto 20px;
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 16px;
-  border: 1px solid rgba(184,255,128,0.3);
-  box-shadow: 0 0 40px rgba(184,255,128,0.25), 0 8px 24px rgba(0,0,0,0.5);
-}
-
-.login-kicker {
-  display: block;
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-}
-
-.login-card h1 {
-  margin: 0 0 8px;
-  font: 900 32px "Segoe UI", Inter, Arial, sans-serif;
-  line-height: 1.15;
-  letter-spacing: -.8px;
-  text-transform: uppercase;
-  text-shadow: 0 2px 16px rgba(0,0,0,0.5);
-  color: #ffffff;
-}
-
-.login-card h1 strong {
-  color: var(--gold);
-  font-weight: 900;
-}
-
-.login-card > p {
-  color: var(--muted);
-  font-size: 12px;
-  margin: 0 0 28px;
-}
-
-.login-roblox {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  height: 48px;
-  background: linear-gradient(180deg, var(--accent), var(--accent-dim));
-  border: none;
-  border-radius: 8px;
-  color: #060a14;
-  font: 700 14px "Segoe UI", Inter, sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  text-decoration: none;
-  cursor: pointer;
-  box-shadow: 0 8px 24px rgba(184,255,128,0.35), inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -2px 0 rgba(0,0,0,0.15);
-  transition: all .15s ease;
-}
-
-.login-roblox:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(184,255,128,0.5), inset 0 2px 0 rgba(255,255,255,0.35);
-}
-
-.login-roblox span {
-  font-size: 16px;
-}
-
-.login-security {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(184,255,128,0.1);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.login-security i {
-  width: 4px;
-  height: 4px;
-  background: var(--accent-dim);
-  border-radius: 50%;
-}
-
-.login-card > small {
-  display: block;
-  margin-top: 16px;
-  font-size: 10px;
-  color: #526070;
-  line-height: 1.5;
-}
-
-.login-page footer {
-  position: absolute;
-  bottom: 24px;
-  font-size: 10px;
-  color: #3a4a5a;
-  letter-spacing: .12em;
-}
-
-/* ── Floating particles ── */
-.login-particles {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.login-particle {
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  opacity: 0;
-  animation: floatUp 12s linear infinite;
-}
-
-@keyframes floatUp {
-  0% { opacity: 0; transform: translateY(100vh); }
-  10% { opacity: 0.7; }
-  90% { opacity: 0.7; }
-  100% { opacity: 0; transform: translateY(-10vh); }
-}
-
-/* ── User menu ── */
-.user {
-  color: inherit;
-  text-decoration: none;
-}
-
-/* ── Login links ── */
-.login-links {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 12px;
-}
-
-.login-links a {
-  color: var(--muted);
-  font-size: 10px;
-  text-decoration: none;
-  transition: color .15s;
-}
-
-.login-links a:hover {
-  color: var(--accent);
-}
-
-/* ── Login responsive ── */
-@media (max-width: 560px) {
-  .login-card h1 { font-size: 26px; }
-  .login-card { padding: 32px 24px; border-radius: 20px; }
-}
-
-

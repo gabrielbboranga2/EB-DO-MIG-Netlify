@@ -1,18 +1,24 @@
 import{NextResponse}from'next/server';
-import{getMembers}from'@/lib/store';
+import{getSessionUser}from'@/lib/auth';
+import{getLiveRoster}from'@/lib/roblox';
+
+export const dynamic='force-dynamic';
 
 export async function GET(request:Request){
+  const session=await getSessionUser<{exp:number}>(request);
+  if(!session)return NextResponse.json({error:'Não autorizado.'},{status:401});
+
   const url=new URL(request.url);
-  const q=url.searchParams.get('q')||'';
-  const division=url.searchParams.get('division')||'';
-  const members=getMembers();
-  let filtered=members;
-  if(q){
-    const lower=q.toLowerCase();
-    filtered=filtered.filter(m=>m.username.toLowerCase().includes(lower)||m.rankName.toLowerCase().includes(lower)||m.userId.includes(lower));
+  const query=(url.searchParams.get('q')||'').trim().toLocaleLowerCase('pt-BR');
+  const division=(url.searchParams.get('division')||'').trim().toUpperCase();
+
+  try{
+    let members=await getLiveRoster();
+    if(division)members=members.filter(member=>member.divisions.includes(division));
+    if(query)members=members.filter(member=>`${member.username} ${member.displayName} ${member.userId} ${member.rankName} ${member.division}`.toLocaleLowerCase('pt-BR').includes(query));
+    return NextResponse.json({members:members.slice(0,200),total:members.length},{headers:{'cache-control':'private, max-age=30'}});
+  }catch(error){
+    console.error('Falha ao carregar efetivo do Roblox',error);
+    return NextResponse.json({error:'Não foi possível sincronizar o efetivo com o Roblox.'},{status:503});
   }
-  if(division){
-    filtered=filtered.filter(m=>m.division===division);
-  }
-  return NextResponse.json({members:filtered.slice(0,50),total:filtered.length});
 }

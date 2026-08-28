@@ -1,85 +1,30 @@
 import{NextResponse}from'next/server';
-import{upsertMember,getMembers}from'@/lib/store';
-import{DIVISOES,DIVISION_IDS,getDivisaoByGroupId}from'@/lib/divisoes-mig';
-import{getPatenteByRoleId}from'@/lib/patentes';
+import{getSessionUser}from'@/lib/auth';
+import{DIVISOES}from'@/lib/divisoes-mig';
+import{getLiveRoster}from'@/lib/roblox';
 
-interface RobloxMember{
-  user:{userId:number;username:string;displayName:string};
-  roles:Array<{id:number;name:string;rank:number}>;
-}
+export const dynamic='force-dynamic';
+type AdminSession={exp:number;isAdmin?:boolean;isCreator?:boolean};
 
-async function fetchGroupMembers(groupId:number):Promise<RobloxMember[]>{
-  const allMembers:RobloxMember[]=[];
-  let cursor='';
-  do{
-    const url=`https://groups.roblox.com/v2/groups/${groupId}/users?limit=100${cursor?'&cursor='+cursor:''}`;
-    const res=await fetch(url);
-    if(!res.ok)break;
-    const data=await res.json()as{data:RobloxMember[];nextPageCursor:string|null};
-    allMembers.push(...data.data);
-    cursor=data.nextPageCursor||'';
-  }while(cursor);
-  return allMembers;
-}
-
-async function fetchUserThumbnails(userIds:number[]):Promise<Record<number,string>>{
-  if(userIds.length===0)return{};
-  const chunks:number[][]=[];
-  for(let i=0;i<userIds.length;i+=100)chunks.push(userIds.slice(i,i+100));
-  const result:Record<number,string>={};
-  for(const chunk of chunks){
-    const params=chunk.map(id=>`userIds=${id}&size=150x150&format=Png&isCircular=false`).join('&');
-    try{
-      const res=await fetch(`https://thumbnails.roblox.com/v1/users/batch?${params}`);
-      if(!res.ok)continue;
-      const data=await res.json()as{data:Array<{targetId:number;imageUrl:string}>};
-      data.data.forEach(t=>{result[t.targetId]=t.imageUrl});
-    }catch{}
+export async function GET(request:Request){
+  const session=await getSessionUser<AdminSession>(request);
+  if(!session)return NextResponse.json({error:'Não autorizado.'},{status:401});
+  try{
+    const members=await getLiveRoster();
+    return NextResponse.json({
+      connected:true,
+      total:members.filter(member=>member.divisions.includes('EXÉRCITO')).length,
+      groups:DIVISOES.map(group=>({id:group.groupId,name:group.nome,sigla:group.sigla,members:members.filter(member=>member.divisions.includes(group.sigla)).length})),
+      checkedAt:new Date().toISOString(),
+    },{headers:{'cache-control':'private, max-age=30'}});
+  }catch(error){
+    console.error('Falha ao verificar conexão com a Roblox',error);
+    return NextResponse.json({error:'Não foi possível consultar os grupos da Roblox.'},{status:503});
   }
-  return result;
 }
 
 export async function POST(request:Request){
-  try{
-    const authHeader=request.headers.get('authorization');
-    if(authHeader!=='Bearer sync_eb_mig_2026')return NextResponse.json({error:'Não autorizado'},{status:401});
-    const mainMembers=await fetchGroupMembers(521106467);
-    const divisionMembers:Record<number,RobloxMember[]>={};
-    for(const div of DIVISOES){
-      if(div.groupId===521106467)continue;
-      divisionMembers[div.groupId]=await fetchGroupMembers(div.groupId);
-    }
-    const userIds=mainMembers.map(m=>m.user.userId);
-    const thumbnails=await fetchUserThumbnails(userIds);
-    let updated=0;
-    for(const member of mainMembers){
-      const role=member.roles[0];
-      if(!role)continue;
-      const patente=getPatenteByRoleId(String(role.id));
-      const userDivisions=Object.entries(divisionMembers)
-        .filter(([_,members])=>members.some(m=>m.user.userId===member.user.userId))
-        .map(([gid])=>getDivisaoByGroupId(Number(gid)))
-        .filter(Boolean);
-      const primaryDiv=userDivisions[0];
-      upsertMember({
-        userId:String(member.user.userId),
-        username:member.user.displayName||member.user.username,
-        avatar:thumbnails[member.user.userId]||'',
-        rankName:patente?`[${patente.sigla}] ${patente.nome}`:role.name,
-        rankNumber:role.rank,
-        roleId:String(role.id),
-        division:primaryDiv?.sigla||'EXÉRCITO',
-        divisionRole:primaryDiv?role.name:'',
-      });
-      updated++;
-    }
-    return NextResponse.json({ok:true,updated,totalMain:mainMembers.length});
-  }catch(e){
-    return NextResponse.json({error:String(e)},{status:500});
-  }
-}
-
-export async function GET(){
-  const members=getMembers();
-  return NextResponse.json({total:members.length,lastSync:members.length>0?members[0].lastSync:null});
+  const session=await getSessionUser<AdminSession>(request);
+  if(!session?.isAdmin&&!session?.isCreator)return NextResponse.json({error:'Acesso administrativo necessário.'},{status:403});
+  return GET(request);
 }

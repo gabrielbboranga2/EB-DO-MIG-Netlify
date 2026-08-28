@@ -1,0 +1,10 @@
+.git
+.next
+node_modules
+.env*
+!.env.example
+.data
+.eslintcache
+EB-DO-MIG-Netlify
+outputs
+work

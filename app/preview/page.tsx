@@ -4,6 +4,8 @@ import{DashboardShell,EmptyState,PanelHead}from'../components/DashboardShell';
 import{TrainingRegistration}from'../components/TrainingRegistration';
 import{DiscordConfiguration}from'../components/DiscordConfiguration';
 import{RankChangeWorkflow}from'../components/RankChangeWorkflow';
+import{CdpMemberControl,CdpPersonalStatus,CdpSettingsManager,ClientCdp}from'../components/CdpSystem';
+import{BulkRankManager}from'../components/BulkRankManager';
 const DIVISION_SIGLAS=['EXÉRCITO','STAFF','BFE','CIE','BAC','BPE'];
 const EVENT_ICONS:Record<string,string>={'promocao':'UP','rebaixamento':'RB','treino':'TR','verificacao':'VR','login':'LG'};
 type Stats={totalSincronizados:number;emCdp:number;treinosMes:number;acoesRegistradas:number;ultimaSincronizacao:string|null;divisoes:Record<string,number>;atividadesRecentes:Array<{id:string;tipo:string;userId:string;username:string;descricao:string;timestamp:string;relativeLabel?:string}>};
@@ -61,25 +63,26 @@ function VisaoGeral({stats}:{stats:Stats}){
 function MilitaresView(){
   const[query,setQuery]=useState('');
   const[division,setDivision]=useState('');
-  type PreviewMember={userId:string;username:string;displayName:string;rankName:string;division:string;divisions:string[];cdpActive:boolean};
+  type PreviewMember={userId:string;username:string;displayName:string;rankName:string;division:string;divisions:string[];roleId:string;cdpActive:boolean;cdpStartedAt:string|null;cdpEndsAt:string|null;cdpRecordId?:string|null};
   const[selected,setSelected]=useState<PreviewMember|null>(null);
-  const members=[
-    {userId:'102481',username:'SgtSilva',displayName:'Silva',rankName:'[3º SGT] Terceiro Sargento',division:'EXÉRCITO · BFE',divisions:['EXÉRCITO','BFE'],cdpActive:false},
-    {userId:'208315',username:'RochaComando',displayName:'Rocha',rankName:'[1º TEN] Primeiro Tenente',division:'EXÉRCITO · BAC',divisions:['EXÉRCITO','BAC'],cdpActive:false},
-    {userId:'391027',username:'CostaBPE',displayName:'Costa',rankName:'[CB] Cabo',division:'EXÉRCITO · BPE',divisions:['EXÉRCITO','BPE'],cdpActive:false},
-    {userId:'485921',username:'IntelMIG',displayName:'Inteligência MIG',rankName:'[2º SGT] Segundo Sargento',division:'EXÉRCITO · CIE',divisions:['EXÉRCITO','CIE'],cdpActive:false},
-    {userId:'512804',username:'StaffMIG',displayName:'Equipe MIG',rankName:'Administrador',division:'STAFF',divisions:['STAFF'],cdpActive:false},
-    {userId:'640219',username:'RecrutaMIG',displayName:'Novo Recruta',rankName:'[REC] Recruta',division:'EXÉRCITO',divisions:['EXÉRCITO'],cdpActive:false},
-  ] satisfies PreviewMember[];
+  const[members,setMembers]=useState<PreviewMember[]>([
+    {userId:'102481',username:'SgtSilva',displayName:'Silva',rankName:'[3º SGT] Terceiro Sargento',division:'EXÉRCITO · BFE',divisions:['EXÉRCITO','BFE'],roleId:'808768016',cdpActive:false,cdpStartedAt:null,cdpEndsAt:null},
+    {userId:'208315',username:'RochaComando',displayName:'Rocha',rankName:'[1º TEN] Primeiro Tenente',division:'EXÉRCITO · BAC',divisions:['EXÉRCITO','BAC'],roleId:'808600018',cdpActive:false,cdpStartedAt:null,cdpEndsAt:null},
+    {userId:'391027',username:'CostaBPE',displayName:'Costa',rankName:'[CB] Cabo',division:'EXÉRCITO · BPE',divisions:['EXÉRCITO','BPE'],roleId:'808664027',cdpActive:false,cdpStartedAt:null,cdpEndsAt:null},
+    {userId:'485921',username:'IntelMIG',displayName:'Inteligência MIG',rankName:'[2º SGT] Segundo Sargento',division:'EXÉRCITO · CIE',divisions:['EXÉRCITO','CIE'],roleId:'807586006',cdpActive:false,cdpStartedAt:null,cdpEndsAt:null},
+    {userId:'512804',username:'StaffMIG',displayName:'Equipe MIG',rankName:'Administrador',division:'STAFF',divisions:['STAFF'],roleId:'808546027',cdpActive:false,cdpStartedAt:null,cdpEndsAt:null},
+    {userId:'640219',username:'RecrutaMIG',displayName:'Novo Recruta',rankName:'[REC] Recruta',division:'EXÉRCITO',divisions:['EXÉRCITO'],roleId:'808360028',cdpActive:false,cdpStartedAt:null,cdpEndsAt:null},
+  ]);
   const counts=Object.fromEntries(DIVISION_SIGLAS.map(sigla=>[sigla,members.filter(member=>member.divisions.includes(sigla)).length]));
   const filtered=members.filter(member=>(!division||member.divisions.includes(division))&&(!query||`${member.username} ${member.displayName} ${member.userId} ${member.rankName}`.toLowerCase().includes(query.toLowerCase())));
   const changeDivision=(next:string)=>{setDivision(next==='TODOS'?'':next);setSelected(null)};
+  const updateCdp=(record:ClientCdp|null)=>{const active=record?.status==='active';const patch={cdpActive:active,cdpStartedAt:active?record.startedAt:null,cdpEndsAt:active?record.endsAt:null,cdpRecordId:active?record.id:null};setMembers(current=>current.map(member=>member.userId===selected?.userId?{...member,...patch}:member));setSelected(current=>current?{...current,...patch}:current)};
   return<div className="workspace-grid roster-layout"><article className="panel workspace"><div className="workspace-toolbar roster-toolbar"><div><span className="kicker">EFETIVO DEMONSTRATIVO</span><h2>Integrantes das comunidades</h2><p>Representação do painel conectado aos seis grupos oficiais.</p></div><div className="roster-total"><strong>{filtered.length}</strong><span>{query?'resultados':division?'integrantes':'militares únicos'}</span></div></div>
 <label className="workspace-search"><span className="search-code" aria-hidden="true">BUSCA</span><input placeholder="Nome, ID ou patente" value={query} onChange={e=>{setQuery(e.target.value);setSelected(null)}}/></label>
 <div className="division-tabs roster-tabs">{['TODOS',...DIVISION_SIGLAS].map(s=><button type="button" key={s} className={(s==='TODOS'&&!division)||division===s?'active':''} onClick={()=>changeDivision(s)}><span>{s}</span><small>{s==='TODOS'?members.length:counts[s]}</small></button>)}</div>
 <div className="roster-context"><span><i/>ROBLOX OPEN CLOUD</span><small>{filtered.length} {filtered.length===1?'integrante encontrado':'integrantes encontrados'}</small></div>
-<div className="records roster-records">{filtered.length?filtered.map(member=><button type="button" key={member.userId} className={selected?.userId===member.userId?'selected':''} onClick={()=>setSelected(member)}><span className="record-avatar-shell"><span>{member.username.slice(0,2).toUpperCase()}</span></span><div><b>{member.username}</b><span className="display-name">{member.displayName}</span><small>{member.rankName} · {member.division}</small></div><span className="record-side"><span className="cdp-chip inactive">FORA DA CDP</span><em>ID: {member.userId}</em></span></button>):<EmptyState title="Nenhum militar encontrado" text="Tente outro nome, patente ou comunidade."/>}</div></article>
-{selected?<aside className="panel member-detail roster-detail"><div className="member-header"><span className="member-avatar avatar-fallback">{selected.username.slice(0,2).toUpperCase()}</span><div><b>{selected.username}</b><small>{selected.displayName}</small><small>{selected.rankName}</small><small>Comunidades: {selected.division}</small><small>ID: {selected.userId}</small></div></div><div className="member-cdp-status inactive"><span>CDP</span><b>Não está em CDP</b><small>Nenhum ciclo de capacitação iniciado</small></div><a className="member-profile-link" href={`https://www.roblox.com/users/${selected.userId}/profile`} target="_blank" rel="noreferrer">Abrir perfil no Roblox ↗</a></aside>:<aside className="panel help roster-help"><span className="kicker">COMUNIDADES CONECTADAS</span><h2>Selecione um integrante</h2><p>Clique em um registro para conferir patente, comunidades e situação da CDP.</p><div className="community-summary">{DIVISION_SIGLAS.map(sigla=><div key={sigla}><span>{sigla}</span><b>{counts[sigla]}</b></div>)}</div><div className="initial-cdp-note"><i/>Todos começam fora da CDP</div></aside>}</div>}
+<div className="records roster-records">{filtered.length?filtered.map(member=><button type="button" key={member.userId} className={selected?.userId===member.userId?'selected':''} onClick={()=>setSelected(member)}><span className="record-avatar-shell"><span>{member.username.slice(0,2).toUpperCase()}</span></span><div><b>{member.username}</b><span className="display-name">{member.displayName}</span><small>{member.rankName} · {member.division}</small></div><span className="record-side"><span className={`cdp-chip ${member.cdpActive?'active':'inactive'}`}>{member.cdpActive?'EM CDP':'FORA DA CDP'}</span><em>ID: {member.userId}</em></span></button>):<EmptyState title="Nenhum militar encontrado" text="Tente outro nome, patente ou comunidade."/>}</div></article>
+{selected?<aside className="panel member-detail roster-detail"><div className="member-header"><span className="member-avatar avatar-fallback">{selected.username.slice(0,2).toUpperCase()}</span><div><b>{selected.username}</b><small>{selected.displayName}</small><small>{selected.rankName}</small><small>Comunidades: {selected.division}</small><small>ID: {selected.userId}</small></div></div><CdpMemberControl key={selected.userId} member={selected} canManage preview onChange={updateCdp}/><a className="member-profile-link" href={`https://www.roblox.com/users/${selected.userId}/profile`} target="_blank" rel="noreferrer">Abrir perfil no Roblox ↗</a></aside>:<aside className="panel help roster-help"><span className="kicker">COMUNIDADES CONECTADAS</span><h2>Selecione um integrante</h2><p>Clique em um registro para conferir patente, comunidades e situação da CDP.</p><div className="community-summary">{DIVISION_SIGLAS.map(sigla=><div key={sigla}><span>{sigla}</span><b>{counts[sigla]}</b></div>)}</div><div className="initial-cdp-note"><i/>Todos começam fora da CDP</div></aside>}</div>}
 
 function HierarchyView(){
   const[selected,setSelected]=useState('EXÉRCITO');
@@ -93,7 +96,7 @@ function HierarchyView(){
   return<div className="hierarchy-page"><div className="hero hierarchy-hero"><div><span className="kicker">ESTRUTURA OFICIAL</span><h1>Hierarquia militar</h1><p>Cargos atuais carregados diretamente das seis comunidades no Roblox.</p></div><div className="hero-status preview"><i/>DADOS REAIS · PREVIEW</div></div><article className="panel hierarchy-panel"><div className="workspace-toolbar"><div><span className="kicker">COMUNIDADE</span><h2>{group?.name||selected}</h2></div><span className="panel-meta">{loading?'SINCRONIZANDO':`${roles.length} CARGOS`}</span></div><div className="division-tabs hierarchy-tabs">{DIVISION_SIGLAS.map(sigla=><button type="button" key={sigla} className={selected===sigla?'active':''} onClick={()=>{setSelected(sigla);setQuery('')}}>{sigla}</button>)}</div><label className="workspace-search"><span className="search-code" aria-hidden="true">BUSCA</span><input placeholder="Buscar cargo ou patente" value={query} onChange={event=>setQuery(event.target.value)}/></label>{loading?<EmptyState title="Sincronizando hierarquia" text="Consultando os cargos atuais no Roblox..."/>:error?<EmptyState title="Hierarquia indisponível" text={error}/>:<div className="hierarchy-list">{roles.map((role,index)=><article className="hierarchy-role" key={role.id}><span className="hierarchy-order">#{String(role.rank).padStart(3,'0')}</span><div><b>{role.name}</b><small>{selected} · cargo oficial da comunidade</small></div><em>{index===0?'TOPO':index===roles.length-1?'BASE':'ATIVO'}</em></article>)}</div>}</article></div>}
 
 function CapacitacaoView(){
-  return<div className="workspace-grid"><article className="panel capacitacao-panel"><div className="capacitacao-card"><div style={{width:80,height:80,borderRadius:'50%',background:'var(--bg)',margin:'0 auto 12px',border:'3px solid var(--accent)',display:'grid',placeItems:'center',color:'var(--accent)',fontSize:24,fontWeight:700}}>CE</div><h2>ComandanteEB</h2><small>[CR] Criador</small><div className="cdp-status done"><span className="cdp-icon">✓</span><div><b>Sua CDP acabou</b></div></div></div></article><aside className="panel help"><span className="kicker">CAPACITAÇÃO</span><h2>Sobre a CDP</h2><p>A Capacitação de Desenvolvimento Pessoal é obrigatória para progressão de patente.</p><ul><li>Cada patente tem um tempo mínimo</li><li>Após completar, elegível para promoção</li><li>O instrutor registra o treino no sistema</li></ul></aside></div>}
+  return<CdpPersonalStatus user={{id:'391027',username:'gabribor-sola',rank:'[SLD] Soldado'}} preview/>}
 
 function TreinamentosView(){return<TrainingRegistration instructor="gabribor-sola" instructorRank={9} instructorRole="[ASP] Aspirante a Oficial" membershipRanks={[{sigla:'STAFF',rank:4,role:'[ADM] Administrador'},{sigla:'BFE',rank:4,role:'[BFE] OFICIAL'},{sigla:'CIE',rank:4,role:'[CIE] OFICIAL'},{sigla:'BAC',rank:4,role:'[BAC] OFICIAL'},{sigla:'BPE',rank:4,role:'[BPE] OFICIAL'}]} preview/>}
 
@@ -110,31 +113,16 @@ function RegistrosView(){
 <EmptyState text="Faça login como criador para ver os registros do Discord."/></article></div>}
 
 function PainelCriadorView(){
-  const[tab,setTab]=useState<'cdp'|'patentes'|'treinos'>('cdp');
+  const[tab,setTab]=useState<'cdp'|'patentes'|'massa'|'treinos'>('cdp');
   return<div className="workspace-grid"><article className="panel workspace"><div className="workspace-toolbar"><div><span className="kicker">ACESSO MÁXIMO</span><h2>Painel do Criador</h2></div></div>
-<div className="division-tabs">{[{k:'cdp',l:'CDP por Patente'},{k:'patentes',l:'Patentes e Hierarquia'},{k:'treinos',l:'Treinamentos'}].map(t=><button key={t.k} className={tab===t.k?'active':''} onClick={()=>setTab(t.k as typeof tab)}>{t.l}</button>)}</div>
+<div className="division-tabs">{[{k:'cdp',l:'CDP por Patente'},{k:'patentes',l:'Patentes e Hierarquia'},{k:'massa',l:'Gestão em massa'},{k:'treinos',l:'Treinamentos'}].map(t=><button key={t.k} className={tab===t.k?'active':''} onClick={()=>setTab(t.k as typeof tab)}>{t.l}</button>)}</div>
 {tab==='cdp'&&<CdpConfigView/>}
 {tab==='patentes'&&<PatentesConfigView/>}
+{tab==='massa'&&<BulkRankManager previewMode/>}
 {tab==='treinos'&&<TreinosConfigView/>}
 </article></div>}
 
-function CdpConfigView(){
-  const[ranks,setRanks]=useState([
-    {sigla:'REC',nome:'Recruta',dias:0},{sigla:'SLD',nome:'Soldado',dias:1},{sigla:'CB',nome:'Cabo',dias:2},
-    {sigla:'3° SGT',nome:'Terceiro Sargento',dias:3},{sigla:'2° SGT',nome:'Segundo Sargento',dias:4},
-    {sigla:'1° SGT',nome:'Primeiro Sargento',dias:5},{sigla:'ST',nome:'Sub-tenente',dias:6},
-    {sigla:'CT',nome:'Cadete',dias:7},{sigla:'ASP',nome:'Aspirante a Oficial',dias:8},
-    {sigla:'2° TEN',nome:'Segundo Tenente',dias:9},{sigla:'1° TEN',nome:'Primeiro Tenente',dias:10},
-    {sigla:'CAP',nome:'Capitão',dias:11},{sigla:'MAJ',nome:'Major',dias:12},
-    {sigla:'TEN-CEL',nome:'Tenente Coronel',dias:13},{sigla:'CEL',nome:'Coronel',dias:14},
-    {sigla:'GEN BDA',nome:'General de Brigada',dias:15},{sigla:'GEN DV',nome:'General de Divisão',dias:16},
-    {sigla:'GEN EX',nome:'General de Exército',dias:17},
-  ]);
-  const[saved,setSaved]=useState(false);
-  const updateDias=(idx:number,dias:number)=>{setRanks(current=>current.map((rank,index)=>index===idx?{...rank,dias}:rank));setSaved(false)};
-  return<div><h3 style={{margin:'12px 0',color:'var(--text)'}}>Tempo de CDP por patente — Exército</h3>
-<div className="cdp-config-list">{ranks.map((r,index)=><div className="cdp-config-row" key={r.sigla}><span className="cdp-sigla">[{r.sigla}]</span><span className="cdp-nome">{r.nome}</span><label className="cdp-input"><input aria-label={`Dias de CDP para ${r.nome}`} type="number" min={0} max={30} value={r.dias} onChange={e=>updateDias(index,Number(e.target.value))}/><small>dias</small></label></div>)}</div>
-{saved?<div className="action-success"><span>✓</span><b>Alterações simuladas</b></div>:<button type="button" className="primary" style={{marginTop:12}} onClick={()=>{setSaved(true);setTimeout(()=>setSaved(false),2200)}}>Salvar no preview</button>}</div>}
+function CdpConfigView(){return<CdpSettingsManager preview/>}
 
 function PatentesConfigView(){
   const[patentes,setPatentes]=useState([

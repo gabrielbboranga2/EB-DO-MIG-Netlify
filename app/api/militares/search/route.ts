@@ -2,6 +2,7 @@ import{NextResponse}from'next/server';
 import{getSessionUser}from'@/lib/auth';
 import{getLiveRoster}from'@/lib/roblox';
 import{DIVISOES}from'@/lib/divisoes-mig';
+import{getActiveCdpMap}from'@/lib/cdp';
 
 export const dynamic='force-dynamic';
 
@@ -17,7 +18,8 @@ export async function GET(request:Request){
   const pageSize=50;
 
   try{
-    const roster=await getLiveRoster();
+    const[baseRoster,activeCdp]=await Promise.all([getLiveRoster(),getActiveCdpMap()]);
+    const roster=baseRoster.map(member=>{const cdp=activeCdp.get(member.userId);return{...member,cdpActive:Boolean(cdp),cdpStartedAt:cdp?.startedAt||null,cdpEndsAt:cdp?.endsAt||null,cdpRecordId:cdp?.id||null}});
     const counts=Object.fromEntries(DIVISOES.map(group=>[
       group.sigla,
       roster.filter(member=>member.divisions.includes(group.sigla)).length,

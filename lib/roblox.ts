@@ -57,6 +57,12 @@ export interface RankChangeResult{
   target:{id:string;name:string;rank:number};
 }
 
+export interface BulkRankPreview{
+  groupId:number;community:string;direction:'promotion'|'demotion';
+  current:{id:string;name:string;rank:number};target:{id:string;name:string;rank:number};
+  affectedCount:number;sampleUserIds:string[];
+}
+
 export async function getLiveRoster():Promise<LiveMember[]>{
   if(rosterCache&&rosterCache.expires>Date.now())return rosterCache.members;
   if(rosterRequest)return rosterRequest;
@@ -177,14 +183,46 @@ export async function applyRankChange(userId:string,groupId:number,direction:'pr
   if(!apiKey)throw new Error('ROBLOX_API_KEY não configurada.');
   const change=await previewRankChange(userId,groupId,direction);
   if(change.target.id!==expectedTargetRoleId)throw new Error('A hierarquia mudou. Revise a alteração antes de confirmar.');
-  const membershipId=userId;
-  const base=`https://apis.roblox.com/cloud/v2/groups/${groupId}/memberships/${membershipId}`;
-  const assign=await fetch(`${base}:assignRole`,{method:'POST',headers:{'x-api-key':apiKey,'content-type':'application/json'},body:JSON.stringify({role:`groups/${groupId}/roles/${change.target.id}`}),cache:'no-store'});
-  if(!assign.ok)throw new Error(await robloxWriteError(assign,'O Roblox recusou a atribuição do novo cargo.'));
-  const unassign=await fetch(`${base}:unassignRole`,{method:'POST',headers:{'x-api-key':apiKey,'content-type':'application/json'},body:JSON.stringify({role:`groups/${groupId}/roles/${change.current.id}`}),cache:'no-store'});
-  if(!unassign.ok)throw new Error(await robloxWriteError(unassign,'O novo cargo foi atribuído, mas o cargo anterior não pôde ser removido.'));
+  await assignRoleToMember(userId,groupId,change.current.id,change.target.id,apiKey);
   rosterCache=null;hierarchyCache=null;
   return change;
+}
+
+export async function previewBulkRankChange(groupId:number,sourceRoleId:string,direction:'promotion'|'demotion'):Promise<BulkRankPreview>{
+  const apiKey=process.env.ROBLOX_API_KEY?.trim();if(!apiKey)throw new Error('ROBLOX_API_KEY não configurada.');
+  const division=DIVISOES.find(item=>item.groupId===groupId);if(!division)throw new Error('Comunidade inválida.');
+  const hierarchy=(await getLiveHierarchies()).find(group=>group.groupId===groupId);if(!hierarchy)throw new Error('Hierarquia indisponível.');
+  const currentIndex=hierarchy.roles.findIndex(role=>role.id===sourceRoleId);if(currentIndex<0)throw new Error('O cargo de origem não existe mais.');
+  const current=hierarchy.roles[currentIndex];
+  if(current.rank<=0||current.rank>=253)throw new Error('Este cargo é protegido e não pode ser alterado em massa.');
+  const target=hierarchy.roles[direction==='promotion'?currentIndex-1:currentIndex+1];
+  if(!target||target.rank<=0||target.rank>=253)throw new Error('Não existe um cargo de destino seguro nessa direção.');
+  const memberships=await listGroupMemberships(groupId,apiKey);
+  const affected=memberships.map(membership=>({userId:resourceId(membership.user),roleId:resourceId(membership.role)||resourceId(membership.roles?.at(-1))})).filter(item=>item.userId&&item.roleId===sourceRoleId)as Array<{userId:string;roleId:string}>;
+  return{groupId,community:division.sigla,direction,current:{id:current.id,name:current.name,rank:current.rank},target:{id:target.id,name:target.name,rank:target.rank},affectedCount:affected.length,sampleUserIds:affected.slice(0,8).map(item=>item.userId)};
+}
+
+export async function applyBulkRankChange(groupId:number,sourceRoleId:string,direction:'promotion'|'demotion',expectedTargetRoleId:string,expectedCount:number){
+  const apiKey=process.env.ROBLOX_API_KEY?.trim();if(!apiKey)throw new Error('ROBLOX_API_KEY não configurada.');
+  const preview=await previewBulkRankChange(groupId,sourceRoleId,direction);
+  if(preview.target.id!==expectedTargetRoleId||preview.affectedCount!==expectedCount)throw new Error('O grupo mudou desde a prévia. Revise novamente antes de confirmar.');
+  const memberships=await listGroupMemberships(groupId,apiKey);
+  const userIds=memberships.map(membership=>({userId:resourceId(membership.user),roleId:resourceId(membership.role)||resourceId(membership.roles?.at(-1))})).filter(item=>item.userId&&item.roleId===sourceRoleId).map(item=>item.userId as string);
+  const succeeded:string[]=[];const failed:Array<{userId:string;error:string}>=[];
+  for(let index=0;index<userIds.length;index+=3){
+    const batch=userIds.slice(index,index+3);
+    await Promise.all(batch.map(async userId=>{try{await assignRoleToMember(userId,groupId,sourceRoleId,expectedTargetRoleId,apiKey);succeeded.push(userId)}catch(error){failed.push({userId,error:error instanceof Error?error.message:'Falha desconhecida'})}}));
+  }
+  rosterCache=null;hierarchyCache=null;
+  return{preview,succeededCount:succeeded.length,failedCount:failed.length,failed:failed.slice(0,20)};
+}
+
+async function assignRoleToMember(userId:string,groupId:number,currentRoleId:string,targetRoleId:string,apiKey:string){
+  const base=`https://apis.roblox.com/cloud/v2/groups/${groupId}/memberships/${userId}`;
+  const assign=await fetch(`${base}:assignRole`,{method:'POST',headers:{'x-api-key':apiKey,'content-type':'application/json'},body:JSON.stringify({role:`groups/${groupId}/roles/${targetRoleId}`}),cache:'no-store'});
+  if(!assign.ok)throw new Error(await robloxWriteError(assign,'O Roblox recusou a atribuição do novo cargo.'));
+  const unassign=await fetch(`${base}:unassignRole`,{method:'POST',headers:{'x-api-key':apiKey,'content-type':'application/json'},body:JSON.stringify({role:`groups/${groupId}/roles/${currentRoleId}`}),cache:'no-store'});
+  if(!unassign.ok)throw new Error(await robloxWriteError(unassign,'O novo cargo foi atribuído, mas o cargo anterior não pôde ser removido.'));
 }
 
 async function robloxWriteError(response:Response,fallback:string){

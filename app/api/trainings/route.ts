@@ -3,6 +3,7 @@ import{getSessionUser}from'@/lib/auth';
 import{getDivisaoBySigla}from'@/lib/divisoes-mig';
 import{getUserGroupMemberships}from'@/lib/roblox';
 import{getTrainingRule}from'@/lib/training-rules';
+import{sendSiteLog}from'@/lib/discord-logs';
 
 export const dynamic='force-dynamic';
 export const runtime='nodejs';
@@ -66,6 +67,7 @@ export async function POST(request:Request){
     const response=await fetch(`${webhook}?wait=true`,{method:'POST',body:discordForm,cache:'no-store'});
     if(!response.ok){console.error('Discord recusou o registro de treinamento',response.status,await response.text());return NextResponse.json({error:'O Discord não aceitou o envio. Confira o webhook na Vercel.'},{status:502})}
     const message=await response.json()as{id?:string};
+    await sendSiteLog({title:'Treinamento registrado',color:0xBDA866,fields:[{name:'Instrutor',value:`${session.username}\n${session.rank||'Militar'}`,inline:true},{name:'Comunidade',value:community,inline:true},{name:'Treinamento',value:rule.name,inline:true},{name:'Participantes',value:participants.map(name=>`• ${name}`).join('\n')},{name:'Relatório',value:observation},{name:'Prova',value:`Enviada no canal de treinamentos · mensagem ${message.id||'sem ID'}`} ]});
     return NextResponse.json({ok:true,messageId:message.id||null},{status:201,headers:{'cache-control':'no-store'}});
   }catch(error){console.error('Falha ao registrar treinamento',error);return NextResponse.json({error:'Não foi possível processar a foto do treinamento.'},{status:500})}
 }

@@ -2,6 +2,7 @@ import{NextResponse}from'next/server';
 import{getSessionUser}from'@/lib/auth';
 import{getLiveRoster}from'@/lib/roblox';
 import{DIVISOES}from'@/lib/divisoes-mig';
+import{getActiveCdpMap}from'@/lib/cdp';
 
 export const dynamic='force-dynamic';
 
@@ -10,14 +11,14 @@ export async function GET(request:Request){
   if(!session)return NextResponse.json({error:'Não autorizado.'},{status:401});
 
   try{
-    const members=await getLiveRoster();
+    const[members,activeCdp]=await Promise.all([getLiveRoster(),getActiveCdpMap()]);
     const divisoes=Object.fromEntries(DIVISOES.map(division=>[
       division.sigla,
       members.filter(member=>member.divisions.includes(division.sigla)).length,
     ]));
     return NextResponse.json({
       totalSincronizados:divisoes['EXÉRCITO']||members.length,
-      emCdp:members.filter(member=>member.cdpActive).length,
+      emCdp:activeCdp.size,
       treinosMes:0,
       acoesRegistradas:0,
       ultimaSincronizacao:new Date().toISOString(),

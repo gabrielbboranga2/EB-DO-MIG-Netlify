@@ -31,8 +31,11 @@ Variáveis obrigatórias:
 - `ROBLOX_GROUP_ID`: `521106467`.
 - `ROBLOX_DIVISION_GROUPS`: `319140811,34565583,729809284,886757353,710960394`.
 - `SITE_URL`: `https://eb-do-mig.vercel.app`, sem barra final.
+- `DATABASE_URL`: conexão PostgreSQL usada para CDPs e configuração dos prazos.
 
-`SUPPORT_EMAIL` e os webhooks do Discord são opcionais, embora um e-mail real seja recomendado para a análise do OAuth. Nunca envie `.env.local`, Client Secret, API Key, Session Secret ou webhooks para o GitHub.
+`SUPPORT_EMAIL` e os webhooks do Discord são opcionais, embora um e-mail real seja recomendado para a análise do OAuth. Use `DISCORD_LOGS_WEBHOOK` para o webhook do canal **logs site**; CDP, treinamentos, promoções, rebaixamentos e gestões em massa são registrados nele. Nunca envie `.env.local`, Client Secret, API Key, Session Secret, conexão do banco ou webhooks para o GitHub.
+
+As tabelas `cdp_records` e `cdp_settings` são criadas automaticamente no primeiro acesso autenticado após conectar o PostgreSQL. Sem `DATABASE_URL`, o restante do painel continua disponível e a CDP informa que o banco está pendente.
 
 O efetivo e as patentes são consultados diretamente na Roblox Open Cloud. O projeto não depende de arquivos gravados durante a execução, pois o sistema de arquivos das funções da Vercel não deve ser usado como armazenamento permanente.
 
